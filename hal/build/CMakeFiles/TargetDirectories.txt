@@ -1,3 +1,0 @@
-/home/worker/hal/build/CMakeFiles/rebuild_cache.dir
-/home/worker/hal/build/CMakeFiles/hal.dir
-/home/worker/hal/build/CMakeFiles/edit_cache.dir
