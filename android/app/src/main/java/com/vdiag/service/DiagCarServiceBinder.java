@@ -16,6 +16,9 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     }
     @Override
     public void getProperty(DiagRequest request, IDiagCallback callback)  {
+
+        PermissionGate.enforce(mService);
+
         int callerPid = Binder.getCallingPid();
         int callerUid = Binder.getCallingUid();
 

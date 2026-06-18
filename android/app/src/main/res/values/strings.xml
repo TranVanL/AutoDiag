@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">VDiag</string>
+    <string name="permission_diagnose_description">
+    Allows access to vehicle diagnostic data including VIN, DTC, and sensor readings.
+    </string>
 </resources>
