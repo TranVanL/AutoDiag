@@ -2,9 +2,7 @@ package com.vdiag;
 
 
 parcelable DiagRequest {
-    int serviceId;
-    int subFunction;
-    String payload;
-    long timestamp;
-    String clientId;
+    int requestId;           // Unique request ID
+    int propertyId;          // DID to read (0xF190, 0xFD01, ...)
+    byte[] payload;          // Optional payload
 }

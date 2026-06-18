@@ -15,47 +15,20 @@ import com.vdiag.IDiagCarService;
 public class DiagCarService extends Service {
     private final RemoteCallbackList<IDiagCallback> callbacks = new RemoteCallbackList<>();
     private static final String TAG = "DiagCarService";
-    private final IDiagCarService.Stub binder = new IDiagCarService.Stub() {
-        @Override
-        public void sendRequest(DiagRequest request, IDiagCallback callback) throws RemoteException {
-            Log.d(TAG, "sendRequest from Pid: " + android.os.Binder.getCallingPid());
-            if (callback != null) {
-                callback.onResponse(request, 0);
-            }
-        }
-        @Override
-        public void registerCallback(IDiagCallback callback)  {
-            Log.d(TAG, "registerCallback from Pid: " + android.os.Binder.getCallingPid());
-            if (callback != null) {
-                callbacks.register(callback);
-                Log.d(TAG, "registerCallback success");
-            }
-        }
-        @Override
-        public void unregisterCallback(IDiagCallback callback)  {
-            if (callback != null) {
-                callbacks.unregister(callback);
-                Log.d(TAG, "unregisterCallback success");
-            }
-        }
-
-        @Override
-        public boolean isConnected()  {
-            Log.d(TAG, "Current Status : Not Connected");
-            return false;
-        }
-    };
+    private DiagCarServiceBinder mBinder;
 
     @Override
     public  void onCreate() {
         super.onCreate();
         Log.i(TAG, "DiagCarService onCreate");
+        mBinder = new DiagCarServiceBinder(this);
+        Log.i(TAG, "DiagCarService Binder created");
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         Log.i(TAG, "📍 onBind — client connecting");
-        return binder;
+        return mBinder;
     }
 
     @Override
@@ -65,9 +38,19 @@ public class DiagCarService extends Service {
     }
 
     @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand — startId=" + startId);
+        return START_STICKY;  // survive process restart
+    }
+
+    @Override
     public void onDestroy() {
         Log.i(TAG, "DiagCarService onDestroy");
         callbacks.kill();
+        if (mBinder != null) {
+            mBinder.cleanup();
+            mBinder = null;
+        }
         super.onDestroy();
     }
 }

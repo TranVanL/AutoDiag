@@ -20,6 +20,11 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            // Enable CheckJNI, debuggable
+            debuggable true
+            // jniDebuggable true   ← uncomment khi debug native code
+        }
     }
     buildFeatures {
         aidl true
