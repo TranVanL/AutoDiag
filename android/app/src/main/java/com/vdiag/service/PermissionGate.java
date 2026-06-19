@@ -7,7 +7,7 @@ import android.util.Log;
 
 public final class PermissionGate {
     private static final String TAG = "VDiag.Permission";
-    public static final String PERMISSION_DIAGNOSE = "com.vdiag.permission.ACCESS_DIAG_SERVICE";
+    public static final String PERMISSION_DIAGNOSE = "com.vdiag.permission.DIAGNOSE";
 
     PermissionGate() {}
 
@@ -20,7 +20,7 @@ public final class PermissionGate {
         ctx.enforceCallingOrSelfPermission(
                 PERMISSION_DIAGNOSE,
                 "Caller (pid=" + callerPid + " uid=" + callerUid +
-                        ") lacks com.vdiag.permission.DIAGNOSE"
+                ") lacks " + PERMISSION_DIAGNOSE
         );
 
         Log.i(TAG, "🔐 Permission check — success");

@@ -7,14 +7,14 @@
          protectionLevel="signature": Only app has the same signature can grant this permission.
          ============================================================ -->
     <permission
-        android:name="com.vdiag.permission.ACCESS_DIAG_SERVICE"
+        android:name="com.vdiag.permission.DIAGNOSE"
         android:label="Vehicle Diagnostic Access"
         android:protectionLevel="signature"/>
 
     <!-- ============================================================
          User app get permission from system
          ============================================================ -->
-    <uses-permission android:name="com.vdiag.permission.ACCESS_DIAG_SERVICE" />
+        <uses-permission android:name="com.vdiag.permission.DIAGNOSE" />
 
     <application
         android:allowBackup="true"

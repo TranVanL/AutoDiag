@@ -3,17 +3,10 @@ package com.vdiag.service;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
-import android.os.RemoteCallbackList;
-import android.os.RemoteException;
 import android.util.Log;
-
-import com.vdiag.DiagRequest;
-import com.vdiag.IDiagCallback;
-import com.vdiag.IDiagCarService;
 
 
 public class DiagCarService extends Service {
-    private final RemoteCallbackList<IDiagCallback> callbacks = new RemoteCallbackList<>();
     private static final String TAG = "DiagCarService";
     private DiagCarServiceBinder mBinder;
 
@@ -46,7 +39,6 @@ public class DiagCarService extends Service {
     @Override
     public void onDestroy() {
         Log.i(TAG, "DiagCarService onDestroy");
-        callbacks.kill();
         if (mBinder != null) {
             mBinder.cleanup();
             mBinder = null;
