@@ -11,8 +11,12 @@ import com.vdiag.DiagRequest;
 public class DiagCarServiceBinder extends IDiagCarService.Stub {
     private static final String TAG = "CarService.Binder";
     private final DiagCarService mService;
-    public DiagCarServiceBinder(DiagCarService service) {
+    private final ClientRegistry mClientRegistry;
+    public DiagCarServiceBinder(DiagCarService service , ClientRegistry clientRegistry) {
+
         mService = service;
+        mClientRegistry = clientRegistry;
+
     }
     @Override
     public void getProperty(DiagRequest request, IDiagCallback callback)  {
@@ -32,7 +36,11 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
             return;
         }
 
-
+        if (callback == null) {
+            Log.e(TAG, "Invalid DiagCallback");
+            return;
+        }
+        mClientRegistry.register(callback);
         int requestId = request.requestId;
         int propertyId = request.propertyId;
 

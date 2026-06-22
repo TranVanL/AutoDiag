@@ -9,12 +9,14 @@ import android.util.Log;
 public class DiagCarService extends Service {
     private static final String TAG = "DiagCarService";
     private DiagCarServiceBinder mBinder;
+    private ClientRegistry mClientRegistry;
 
     @Override
     public  void onCreate() {
         super.onCreate();
         Log.i(TAG, "DiagCarService onCreate");
-        mBinder = new DiagCarServiceBinder(this);
+        mClientRegistry = new ClientRegistry();
+        mBinder = new DiagCarServiceBinder(this, mClientRegistry);
         Log.i(TAG, "DiagCarService Binder created");
     }
 
@@ -42,6 +44,10 @@ public class DiagCarService extends Service {
         if (mBinder != null) {
             mBinder.cleanup();
             mBinder = null;
+        }
+        if (mClientRegistry != null) {
+            mClientRegistry.cleanup();
+            mClientRegistry = null;
         }
         super.onDestroy();
     }
