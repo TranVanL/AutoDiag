@@ -40,6 +40,7 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
             Log.e(TAG, "Invalid DiagCallback");
             return;
         }
+
         mClientRegistry.register(callback);
         int requestId = request.requestId;
         int propertyId = request.propertyId;
