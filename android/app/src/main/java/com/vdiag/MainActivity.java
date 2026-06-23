@@ -52,13 +52,14 @@ public class MainActivity extends AppCompatActivity {
         public void onServiceDisconnected(ComponentName componentName) {
             Log.i(TAG, "onServiceDisconnected");
             mDiagService = null;
+            mIsBound = false;
             mGetVinButton.setEnabled(false);
             mGetSwVersionButton.setEnabled(false);
             Toast.makeText(MainActivity.this, "Service disconnected !!!", Toast.LENGTH_LONG).show();
         }
     };
 
-    public final IDiagCallback mCallback = new IDiagCallback.Stub() {
+    private final IDiagCallback mCallback = new IDiagCallback.Stub() {
         @Override
         public void onResult(int requestId, String value, long latencyUs) {
             Log.i(TAG, "onResult - callback from service to client !!!");
@@ -149,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
             }
             unbindService(mConnection);
             mDiagService = null;
+            mIsBound = false;
         }
     }
 }

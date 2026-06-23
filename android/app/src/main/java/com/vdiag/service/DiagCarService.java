@@ -32,14 +32,8 @@ public class DiagCarService extends Service {
 
     @Override
     public boolean onUnbind(Intent intent) {
-        Log.i(TAG, "📍 onUnbind — client disconnecting");
+        Log.i(TAG, "onUnbind — client disconnecting");
         return super.onUnbind(intent);
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand — startId=" + startId);
-        return START_STICKY;  // survive process restart
     }
 
     @Override
@@ -49,10 +43,7 @@ public class DiagCarService extends Service {
             mBinder.cleanup();
             mBinder = null;
         }
-        if (mClientRegistry != null) {
-            mClientRegistry.cleanup();
-            mClientRegistry = null;
-        }
+        mClientRegistry = null;
         super.onDestroy();
     }
 }

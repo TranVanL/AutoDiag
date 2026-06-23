@@ -2,11 +2,12 @@
 #include <android/log.h>
 #include <string>
 
-std::string getDummyResponse(int propertyId);
 extern JavaVM* g_jvm;
 extern jclass g_callbackClass;
 extern jmethodID g_onResultId;
 extern jmethodID g_onErrorId;
+
+static std::string getDummyResponse(int propertyId);
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -34,15 +35,16 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
     env->CallVoidMethod(callback,g_onResultId , requestId , jval , (jlong)30000);
     if (env->ExceptionCheck()) {
         __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",
-                            "CallVoidMethod exception");
+                            "nativeGetProperty: exception during CallVoidMethod");
         env->ExceptionDescribe();
+        env->ExceptionClear();
     }
 
     env->DeleteLocalRef(jval);
     __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI","nativeGetProperty callback fired!!");
 }
 
-std::string getDummyResponse(int propertyId) {
+static std::string getDummyResponse(int propertyId) {
     switch (propertyId) {
         case 0xF190:  // Vehicle Identification Number
             return "VINFAST12345678901";

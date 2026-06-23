@@ -16,13 +16,13 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_jvm = vm;
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env) , JNI_VERSION_1_6) != JNI_OK) {
-        __android_log_print(ANDROID_LOG_INFO, TAG, "JNI_OnLoad failed");
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: GetEnv failed");
         return -1;
     }
 
     jclass localCallbackClass = env->FindClass(CALLBACK_CLASS_NAME);
     if (localCallbackClass == nullptr) {
-        __android_log_print(ANDROID_LOG_INFO, TAG, "Failed to find callback class");
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: FindClass(%s) failed", CALLBACK_CLASS_NAME);
         return -1;
     }
     g_callbackClass = reinterpret_cast<jclass>(env->NewGlobalRef(localCallbackClass));
@@ -30,13 +30,13 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
 
     g_onResultId = env->GetMethodID(g_callbackClass, "onResult", "(ILjava/lang/String;J)V");
     if (g_onResultId == nullptr) {
-        __android_log_print(ANDROID_LOG_INFO, TAG, "Failed to find onResult method");
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: GetMethodID(onResult) failed");
         return -1;
     }
 
     g_onErrorId = env->GetMethodID(g_callbackClass, "onError", "(IILjava/lang/String;)V");
     if (g_onErrorId == nullptr) {
-        __android_log_print(ANDROID_LOG_INFO, TAG, "Failed to find onError method");
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: GetMethodID(onError) failed");
         return -1;
     }
 
@@ -44,8 +44,8 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_VERSION_1_6;
 }
 
-void JNI_OnUnLoad(JavaVM* vm, void* reserved) {
-    __android_log_print(ANDROID_LOG_INFO, TAG, "JNI_OnUnLoad");
+void JNI_OnUnload(JavaVM* vm, void* reserved) {
+    __android_log_print(ANDROID_LOG_INFO, TAG, "JNI_OnUnload");
     JNIEnv* env = nullptr;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) == JNI_OK) {
         if (g_callbackClass != nullptr) {

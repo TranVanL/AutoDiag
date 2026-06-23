@@ -9,9 +9,8 @@ public class DiagHalBridge {
 
     static {
         try {
-            Log.i(TAG, "Function Onload is called after initing JNI bridge ");
             System.loadLibrary("vdiag_jni");
-            Log.i(TAG, "Native library 'vdiag_jni' loaded");
+            Log.i(TAG, "Native library 'vdiag_jni' loaded — JNI_OnLoad will fire");
         } catch (UnsatisfiedLinkError e) {
             Log.e(TAG, "Failed to load native library 'vdiag_jni'", e);
         }

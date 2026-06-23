@@ -9,7 +9,7 @@ public final class PermissionGate {
     private static final String TAG = "VDiag.Permission";
     public static final String PERMISSION_DIAGNOSE = "com.vdiag.permission.DIAGNOSE";
 
-    PermissionGate() {}
+    private PermissionGate() {}
 
     public static void enforce(Context ctx) {
         int callerPid = Binder.getCallingPid();
