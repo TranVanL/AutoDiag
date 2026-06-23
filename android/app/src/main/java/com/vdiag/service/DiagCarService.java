@@ -15,6 +15,10 @@ public class DiagCarService extends Service {
     public  void onCreate() {
         super.onCreate();
         Log.i(TAG, "DiagCarService onCreate");
+        
+        // Initialize JNI Bridge
+        DiagHalBridge.nativeInit("vdiag_hal_default");
+
         mClientRegistry = new ClientRegistry();
         mBinder = new DiagCarServiceBinder(this, mClientRegistry);
         Log.i(TAG, "DiagCarService Binder created");

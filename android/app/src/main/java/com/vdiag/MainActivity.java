@@ -7,9 +7,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.os.SystemClock;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,6 +28,8 @@ public class MainActivity extends AppCompatActivity {
     private Button mGetVinButton;
 
     private Button mGetSwVersionButton;
+
+    private boolean mIsBound = false;
 
 
     private final ServiceConnection mConnection = new ServiceConnection() {
@@ -127,13 +127,14 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent();
         intent.setComponent(new ComponentName("com.vdiag" , "com.vdiag.service.DiagCarService"));
         bindService(intent, mConnection,Context.BIND_AUTO_CREATE);
+        mIsBound = true;
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         Log.i(TAG, "🔓 onStop — unbindService");
-        if (mDiagService != null) {
+        if (mIsBound) {
             unbindService(mConnection);
             mDiagService = null;
         }
