@@ -1,89 +1,88 @@
 package com.vdiag.service;
 
 import android.os.Binder;
-import android.util.Log;
 import android.os.RemoteException;
+import android.util.Log;
 
 import com.vdiag.IDiagCallback;
 import com.vdiag.IDiagCarService;
 import com.vdiag.DiagRequest;
 
+import java.util.Map;
+
 public class DiagCarServiceBinder extends IDiagCarService.Stub {
     private static final String TAG = "CarService.Binder";
     private final DiagCarService mService;
     private final ClientRegistry mClientRegistry;
-    public DiagCarServiceBinder(DiagCarService service , ClientRegistry clientRegistry) {
 
+    public DiagCarServiceBinder(DiagCarService service, ClientRegistry clientRegistry) {
         mService = service;
         mClientRegistry = clientRegistry;
-
     }
+
     @Override
-    public void getProperty(DiagRequest request, IDiagCallback callback)  {
-
+    public void registerCallback(IDiagCallback callback) {
         PermissionGate.enforce(mService);
+        mClientRegistry.register(callback);
+    }
 
-        int callerPid = Binder.getCallingPid();
-        int callerUid = Binder.getCallingUid();
+    @Override
+    public void unregisterCallback(IDiagCallback callback) {
+        mClientRegistry.unregister(callback);
+    }
 
-        Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Log.d(TAG, "📥 getProperty() called");
-        Log.d(TAG, "  CallerPid: " + callerPid);
-        Log.d(TAG, "  CallerUid: " + callerUid);
+    @Override
+    public void getProperty(DiagRequest request) {
+        PermissionGate.enforce(mService);
 
         if (request == null) {
             Log.e(TAG, "Invalid DiagRequest");
             return;
         }
 
-        if (callback == null) {
-            Log.e(TAG, "Invalid DiagCallback");
-            return;
-        }
+        Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Log.d(TAG, "getProperty() called for reqId: " + request.requestId);
 
-        mClientRegistry.register(callback);
-        int requestId = request.requestId;
-        int propertyId = request.propertyId;
+        // Tạo một callback trung gian để gửi kết quả tới toàn bộ client đã register
+        IDiagCallback proxyCallback = new IDiagCallback.Stub() {
+            @Override
+            public void onResult(int requestId, String value, long latencyUs) {
+                broadcastResult(requestId, value, latencyUs);
+            }
 
-        Log.i(TAG, "Request ID: " + requestId);
-        Log.i(TAG, "  PropertyId: 0x" + Integer.toHexString(propertyId));
+            @Override
+            public void onError(int requestId, int errorCode, String errorMsg) {
+                broadcastError(requestId, errorCode, errorMsg);
+            }
+        };
 
-        String dummyValue = getDummyResponse(propertyId);
-
-        Log.d(TAG, "  DummyResponse: " + dummyValue);
-        Log.d(TAG, "  Invoking callback...");
-
-        try {
-            callback.onResult(requestId, dummyValue , 0);
-            Log.d(TAG, "  Callback invoked successfully");
-        } catch (RemoteException e) {
-            Log.e(TAG, "Error invoking callback", e);
-        }
-
+        DiagHalBridge.nativeGetProperty(request.requestId, request.propertyId, request.payload, proxyCallback);
+        Log.d(TAG, "getProperty() dispatched to HAL");
         Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 
-    
-    private String getDummyResponse(int propertyId) {
-        switch (propertyId) {
-            case 0xF190:  // Vehicle Identification Number
-                return "VINFAST12345678901";
-            case 0xF187:  // Software version
-                return "SW_V3.2.1_AAOS_HKMC";
-            case 0xFD01:  // Battery SOC %
-                return "78";
-            case 0xFE01:  // Motor RPM
-                return "3200";
-            case 0x0104:  // Engine temp
-                return "92";
-            case 0x010C:  // RPM (OBD mode 01)
-                return "1500";
-            default:
-                return "UNKNOWN_PROPERTY_0x" + Integer.toHexString(propertyId);
+    private void broadcastResult(int requestId, String value, long latencyUs) {
+        for (Map.Entry<android.os.IBinder, ClientRegistry.ClientEntry> entry : mClientRegistry.mClients.entrySet()) {
+            try {
+                entry.getValue().callback.onResult(requestId, value, latencyUs);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to notify client", e);
+            }
         }
     }
-    public void cleanup() {
-        Log.i(TAG, "🧹 DiagServiceBinder.cleanup()");
+
+    private void broadcastError(int requestId, int errorCode, String errorMsg) {
+        for (Map.Entry<android.os.IBinder, ClientRegistry.ClientEntry> entry : mClientRegistry.mClients.entrySet()) {
+            try {
+                entry.getValue().callback.onError(requestId, errorCode, errorMsg);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to notify client", e);
+            }
+        }
     }
 
+    public void cleanup() {
+        Log.i(TAG, "🧹 DiagServiceBinder.cleanup()");
+        mClientRegistry.cleanup();
+    }
 }

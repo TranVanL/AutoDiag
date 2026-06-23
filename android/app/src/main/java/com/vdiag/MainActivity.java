@@ -35,27 +35,33 @@ public class MainActivity extends AppCompatActivity {
     private final ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            Log.i(TAG , "onServiceConnected");
+            Log.i(TAG, "onServiceConnected");
             mDiagService = IDiagCarService.Stub.asInterface(iBinder);
-            Toast.makeText(MainActivity.this, "Service connected !!!" , Toast.LENGTH_LONG).show();
+            try {
+                mDiagService.registerCallback(mCallback);
+                Log.i(TAG, "Callback registered to service");
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to register callback", e);
+            }
+            Toast.makeText(MainActivity.this, "Service connected !!!", Toast.LENGTH_LONG).show();
             mGetVinButton.setEnabled(true);
             mGetSwVersionButton.setEnabled(true);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            Log.i(TAG , "onServiceDisconnected");
+            Log.i(TAG, "onServiceDisconnected");
             mDiagService = null;
             mGetVinButton.setEnabled(false);
             mGetSwVersionButton.setEnabled(false);
-            Toast.makeText(MainActivity.this, "Service disconnected !!!" , Toast.LENGTH_LONG).show();
+            Toast.makeText(MainActivity.this, "Service disconnected !!!", Toast.LENGTH_LONG).show();
         }
     };
 
     public final IDiagCallback mCallback = new IDiagCallback.Stub() {
         @Override
-        public void onResult(int requestId, String value, long latencyUs) throws RemoteException {
-            Log.i(TAG , "onResult - callback from service to client !!!");
+        public void onResult(int requestId, String value, long latencyUs) {
+            Log.i(TAG, "onResult - callback from service to client !!!");
             runOnUiThread(() -> {
                 mResultText.setText("RequestID : " + requestId + "\nValue : " + value + "\nLatency : " + latencyUs );
                 Toast.makeText(MainActivity.this, "OnResult - Callback ", Toast.LENGTH_SHORT).show();
@@ -63,8 +69,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onError(int requestId, int errorCode, String errorMsg) throws RemoteException {
-            Log.i(TAG , "onError - callback from service to client !!!");
+        public void onError(int requestId, int errorCode, String errorMsg) {
+            Log.i(TAG, "onError - callback from service to client !!!");
             runOnUiThread(() -> {
                 mResultText.setText("RequestID : " + requestId + "\nErrorCode : " + errorCode + "\nerrorMsg : " + errorMsg );
                 Toast.makeText(MainActivity.this, "onError - Callback ", Toast.LENGTH_SHORT).show();
@@ -112,12 +118,11 @@ public class MainActivity extends AppCompatActivity {
 
             Log.i(TAG , "Send DiagRequest " + request.requestId + " for " + propertyName + " to Service");
             Toast.makeText(MainActivity.this , "Send request: " + propertyName , Toast.LENGTH_SHORT).show();
-            mDiagService.getProperty(request , mCallback);
+            mDiagService.getProperty(request);
         }
         catch (RemoteException e) {
             Log.e(TAG , "Exception Handle !!!");
         }
-
     }
 
     @Override
@@ -135,6 +140,13 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         Log.i(TAG, "🔓 onStop — unbindService");
         if (mIsBound) {
+            if (mDiagService != null) {
+                try {
+                    mDiagService.unregisterCallback(mCallback);
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Failed to unregister callback", e);
+                }
+            }
             unbindService(mConnection);
             mDiagService = null;
         }

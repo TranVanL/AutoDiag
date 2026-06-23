@@ -17,7 +17,7 @@ public class DiagCarService extends Service {
         Log.i(TAG, "DiagCarService onCreate");
         
         // Initialize JNI Bridge
-        DiagHalBridge.nativeInit("vdiag_hal_default");
+        DiagHalBridge.nativeInit("mock");
 
         mClientRegistry = new ClientRegistry();
         mBinder = new DiagCarServiceBinder(this, mClientRegistry);
