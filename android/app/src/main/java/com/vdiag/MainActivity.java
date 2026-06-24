@@ -132,8 +132,13 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG , "Start Main Activity");
         Intent intent = new Intent();
         intent.setComponent(new ComponentName("com.vdiag" , "com.vdiag.service.DiagCarService"));
-        bindService(intent, mConnection,Context.BIND_AUTO_CREATE);
-        mIsBound = true;
+        mIsBound = bindService(intent, mConnection,Context.BIND_AUTO_CREATE);
+        if (!mIsBound) {
+            Log.e(TAG, "bindService failed");
+            Toast.makeText(this, "Cannot bind to DiagCarService", Toast.LENGTH_SHORT).show();
+            mGetVinButton.setEnabled(false);
+            mGetSwVersionButton.setEnabled(false);
+        }
     }
 
     @Override

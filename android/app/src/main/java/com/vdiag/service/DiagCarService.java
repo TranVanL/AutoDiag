@@ -15,9 +15,11 @@ public class DiagCarService extends Service {
     public  void onCreate() {
         super.onCreate();
         Log.i(TAG, "DiagCarService onCreate");
-        
-        // Initialize JNI Bridge
-        DiagHalBridge.nativeInit("mock");
+
+        // Initialize JNI bridge once service starts.
+        if (!DiagHalBridge.init("mock")) {
+            Log.e(TAG, "JNI init failed, service runs in degraded mode");
+        }
 
         mClientRegistry = new ClientRegistry();
         mBinder = new DiagCarServiceBinder(this, mClientRegistry);

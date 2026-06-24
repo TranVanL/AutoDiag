@@ -25,13 +25,25 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint requestId , jint propertyID , jbyteArray payload , jobject callback) {
+    (void)payload;
     __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
                         "nativeGetProperty: reqId=%d, propId=0x%X", requestId, propertyID);
+
+    if (callback == nullptr || g_onResultId == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",
+                            "nativeGetProperty: callback or g_onResultId is null");
+        return;
+    }
 
     std::string dummyResponse = getDummyResponse(propertyID);
     __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
                         "nativeGetProperty: dummyResponse=%s", dummyResponse.c_str());
     jstring jval = env->NewStringUTF(dummyResponse.c_str());
+    if (jval == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",
+                            "nativeGetProperty: NewStringUTF returned null");
+        return;
+    }
     env->CallVoidMethod(callback,g_onResultId , requestId , jval , (jlong)30000);
     if (env->ExceptionCheck()) {
         __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",

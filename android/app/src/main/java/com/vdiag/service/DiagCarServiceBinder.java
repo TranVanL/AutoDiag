@@ -1,6 +1,7 @@
 package com.vdiag.service;
 
 import android.os.Binder;
+import android.os.RemoteException;
 import android.util.Log;
 
 import com.vdiag.IDiagCallback;
@@ -50,8 +51,17 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
             return;
         }
 
-        DiagHalBridge.nativeGetProperty(request.requestId, request.propertyId, request.payload, callback);
-        Log.d(TAG, "getProperty() dispatched to JNI, reqId=" + request.requestId);
+        try {
+            DiagHalBridge.nativeGetProperty(request.requestId, request.propertyId, request.payload, callback);
+            Log.d(TAG, "getProperty() dispatched to JNI, reqId=" + request.requestId);
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "JNI bridge unavailable", e);
+            try {
+                callback.onError(request.requestId, -1, "JNI bridge unavailable");
+            } catch (RemoteException re) {
+                Log.e(TAG, "Failed to notify callback about JNI error", re);
+            }
+        }
     }
 
     public void cleanup() {
