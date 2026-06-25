@@ -1,5 +1,5 @@
 #include "jni_callback.h"
-
+#include <pthread.h>
 #include <android/log.h>
 
 extern JavaVM* g_jvm;
@@ -8,6 +8,21 @@ extern jmethodID g_onErrorId;
 
 namespace {
     constexpr const char* TAG = "VDiag.JNI";
+    pthread_key_t g_detachKey;
+    pthread_once_t g_detachKeyOnce = PTHREAD_ONCE_INIT;
+
+    void DetachThunk(void* arg) {
+        if (g_jvm != nullptr) {
+            g_jvm->DetachCurrentThread();
+        }
+    }
+
+    void CreateDetachKey() {
+        const int rc = pthread_key_create(&g_detachKey, DetachThunk);
+        if (rc != 0 ) {
+            __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: pthread_key_create failed");
+        }
+    }
 }
 
 JniCallbackBridge::JniCallbackBridge(JNIEnv* env, jobject callback) {
@@ -124,8 +139,12 @@ JNIEnv* JniCallbackBridge::getEnv() {
             __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: AttachCurrentThread failed");
             return nullptr;
         }
+        pthread_once(&g_detachKeyOnce, CreateDetachKey);
+        pthread_setspecific(g_detachKey,reinterpret_cast<void*>(1));
+        __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge: Attached to thread and register auto-detach ");
         return env;
-        }
+
     }
+    __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: GetEnv failed");
     return nullptr;
-}
+    }
