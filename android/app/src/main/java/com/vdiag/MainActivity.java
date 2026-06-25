@@ -62,19 +62,19 @@ public class MainActivity extends AppCompatActivity {
     private final IDiagCallback mCallback = new IDiagCallback.Stub() {
         @Override
         public void onResult(int requestId, String value, long latencyUs) {
-            Log.i(TAG, "onResult - callback from service to client !!!");
+            Log.i(TAG, "onResult - callback from service to client !!! [reqId:" + requestId + "] Value: " + value);
             runOnUiThread(() -> {
                 mResultText.setText("RequestID : " + requestId + "\nValue : " + value + "\nLatency : " + latencyUs );
-                Toast.makeText(MainActivity.this, "OnResult - Callback ", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Result: " + value, Toast.LENGTH_SHORT).show();
             });
         }
 
         @Override
         public void onError(int requestId, int errorCode, String errorMsg) {
-            Log.i(TAG, "onError - callback from service to client !!!");
+            Log.i(TAG, "onError - callback from service to client !!! [reqId:" + requestId + "] Error: " + errorCode + " - " + errorMsg);
             runOnUiThread(() -> {
                 mResultText.setText("RequestID : " + requestId + "\nErrorCode : " + errorCode + "\nerrorMsg : " + errorMsg );
-                Toast.makeText(MainActivity.this, "onError - Callback ", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Error: " + errorCode, Toast.LENGTH_SHORT).show();
             });
         }
     };

@@ -49,21 +49,18 @@ JniCallbackBridge::JniCallbackBridge(JniCallbackBridge &&other) noexcept{
 }
 
 JniCallbackBridge::~JniCallbackBridge() noexcept {
-    if (m_callback == nullptr) {
+    if (m_callback != nullptr) {
+        JNIEnv* env = getEnv();
+        if (env != nullptr) {
+            env->DeleteGlobalRef(m_callback);
+            __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge: GlobalRef deleted and bridge destroyed");
+        } else {
+            __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: Destructor failed to get JNIEnv to delete GlobalRef");
+        }
+        m_callback = nullptr;
+    } else {
         __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge destroyed (already null)");
-        return;
     }
-
-    JNIEnv* env = getEnv();
-    if (env == nullptr) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: getEnv failed in destructor");
-        return;
-    }
-
-    env->DeleteGlobalRef(m_callback);
-    m_callback = nullptr;
-    __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge destroyed");
-
 }
 
 

@@ -46,10 +46,11 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
     const int proID = propertyID;
 
     std::thread([bridge,reqId,proID]() {
-       std::this_thread::sleep_for(std::chrono::microseconds (30));
+       std::this_thread::sleep_for(std::chrono::milliseconds(50));
        const std::string response = getDummyResponse(proID);
+       __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
+                           "nativeGetProperty(worker): sending result for reqId=%d", reqId);
        bridge->onResult(reqId, response, 1000);
-       __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI","nativeGetProperty: bridge.onResult called");
     }).detach();
 
     __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
