@@ -1,6 +1,9 @@
 #include <jni.h>
 #include <android/log.h>
+#include <chrono>
+#include <memory>
 #include <string>
+#include <thread>
 #include "jni_callback.h"
 
 
@@ -37,10 +40,20 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
                         "nativeGetProperty: dummyResponse=%s", dummyResponse.c_str());
 
     // Use JniCallbackBridge to handle the callback logic
-    JniCallbackBridge bridge(env, callback);
-    bridge.onResult(requestId, dummyResponse, 30000);
+    auto bridge = std::make_shared<JniCallbackBridge>(env,callback);
 
-    __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI","nativeGetProperty: bridge.onResult called");
+    const int reqId = requestId;
+    const int proID = propertyID;
+
+    std::thread([bridge,reqId,proID]() {
+       std::this_thread::sleep_for(std::chrono::microseconds (30));
+       const std::string response = getDummyResponse(proID);
+       bridge->onResult(reqId, response, 1000);
+       __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI","nativeGetProperty: bridge.onResult called");
+    }).detach();
+
+    __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
+                        "nativeGetProperty: async worker spawned");
 }
 
 static std::string getDummyResponse(int propertyId) {

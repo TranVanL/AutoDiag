@@ -78,6 +78,10 @@ void JniCallbackBridge::onError(int requestId, int errorCode, const std::string&
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: Env is null");
         return;
     }
+    if (g_onErrorId == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: g_onErrorId is null");
+        return;
+    }
 
     jstring jmsg = env->NewStringUTF(errorMsg.c_str());
 
@@ -105,6 +109,11 @@ void JniCallbackBridge::onResult(int requestId, const std::string &value, int64_
     JNIEnv* env = getEnv();
     if (env == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: Env is null");
+        return;
+    }
+
+    if (g_onResultId == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: g_onResultId is null");
         return;
     }
 
@@ -140,7 +149,11 @@ JNIEnv* JniCallbackBridge::getEnv() {
             return nullptr;
         }
         pthread_once(&g_detachKeyOnce, CreateDetachKey);
-        pthread_setspecific(g_detachKey,reinterpret_cast<void*>(1));
+        const int tlsStatus = pthread_setspecific(g_detachKey,reinterpret_cast<void*>(1));
+        if (tlsStatus != 0) {
+            __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: pthread_setspecific failed");
+            return nullptr;
+        }
         __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge: Attached to thread and register auto-detach ");
         return env;
 
