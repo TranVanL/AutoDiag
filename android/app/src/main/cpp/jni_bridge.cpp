@@ -1,11 +1,8 @@
 #include <jni.h>
 #include <android/log.h>
 #include <string>
+#include "jni_callback.h"
 
-extern JavaVM* g_jvm;
-extern jclass g_callbackClass;
-extern jmethodID g_onResultId;
-extern jmethodID g_onErrorId;
 
 static std::string getDummyResponse(int propertyId);
 
@@ -29,31 +26,21 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
     __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
                         "nativeGetProperty: reqId=%d, propId=0x%X", requestId, propertyID);
 
-    if (callback == nullptr || g_onResultId == nullptr) {
+    if (callback == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",
-                            "nativeGetProperty: callback or g_onResultId is null");
+                            "nativeGetProperty: callback is null");
         return;
     }
 
     std::string dummyResponse = getDummyResponse(propertyID);
     __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI",
                         "nativeGetProperty: dummyResponse=%s", dummyResponse.c_str());
-    jstring jval = env->NewStringUTF(dummyResponse.c_str());
-    if (jval == nullptr) {
-        __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",
-                            "nativeGetProperty: NewStringUTF returned null");
-        return;
-    }
-    env->CallVoidMethod(callback,g_onResultId , requestId , jval , (jlong)30000);
-    if (env->ExceptionCheck()) {
-        __android_log_print(ANDROID_LOG_ERROR, "VDiag.JNI",
-                            "nativeGetProperty: exception during CallVoidMethod");
-        env->ExceptionDescribe();
-        env->ExceptionClear();
-    }
 
-    env->DeleteLocalRef(jval);
-    __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI","nativeGetProperty callback fired!!");
+    // Use JniCallbackBridge to handle the callback logic
+    JniCallbackBridge bridge(env, callback);
+    bridge.onResult(requestId, dummyResponse, 30000);
+
+    __android_log_print(ANDROID_LOG_INFO, "VDiag.JNI","nativeGetProperty: bridge.onResult called");
 }
 
 static std::string getDummyResponse(int propertyId) {

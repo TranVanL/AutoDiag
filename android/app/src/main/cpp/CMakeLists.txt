@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.18.1)
 project(vdiag_jni)
 
 add_library(vdiag_jni SHARED
-    jni_onload.cpp
-    jni_bridge.cpp
+        jni_onload.cpp
+        jni_bridge.cpp
+        jni_callback.cpp
 )
 
 find_library(log-lib log)
