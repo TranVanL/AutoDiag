@@ -6,6 +6,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(include)
 
+enable_testing()
+
 add_library(hal STATIC
     src/dummy.cpp
+    src/uds_codec.cpp
 )
+
+add_executable(test_uds_strategy
+    tests/test_uds_strategy.cpp
+)
+target_link_libraries(test_uds_strategy PRIVATE hal)
+
+add_test(NAME uds_strategy_20_tests COMMAND test_uds_strategy)
