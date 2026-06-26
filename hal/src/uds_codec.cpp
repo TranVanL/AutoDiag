@@ -8,15 +8,24 @@ std::vector<std::uint8_t> encode(const DiagRequest& req) {
     const auto service = static_cast<std::uint8_t>(req.service);
     out.push_back(service);
 
-    if (req.service == UdsService::ReadDataByIdentifier) {
-        out.push_back(static_cast<std::uint8_t>((req.dataId >> 8U) & 0xFFU));
-        out.push_back(static_cast<std::uint8_t>(req.dataId & 0xFFU));
-    } else if (req.service == UdsService::ClearDTC) {
-        out.push_back(0xFF);
-        out.push_back(0xFF);
-        out.push_back(0xFF);
-    } else if (req.service == UdsService::TesterPresent) {
-        out.push_back(req.subFunction);
+    switch (req.service) {
+        case UdsService::DiagnosticSessionControl:
+        case UdsService::ReadDTC:
+        case UdsService::SecurityAccess:
+        case UdsService::TesterPresent:
+            out.push_back(req.subFunction);
+            break;
+        case UdsService::ReadDataByIdentifier:
+            out.push_back(static_cast<std::uint8_t>((req.dataId >> 8U) & 0xFFU));
+            out.push_back(static_cast<std::uint8_t>(req.dataId & 0xFFU));
+            break;
+        case UdsService::ClearDTC:
+            out.push_back(0xFF);
+            out.push_back(0xFF);
+            out.push_back(0xFF);
+            break;
+        default:
+            break;
     }
 
     out.insert(out.end(), req.payload.begin(), req.payload.end());

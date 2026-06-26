@@ -13,9 +13,11 @@ add_library(hal STATIC
     src/uds_codec.cpp
 )
 
-add_executable(test_uds_strategy
-    tests/test_uds_strategy.cpp
+add_executable(test_uds_codec
+    tests/test_uds_codec.cpp
 )
-target_link_libraries(test_uds_strategy PRIVATE hal)
+target_link_libraries(test_uds_codec PRIVATE hal)
 
-add_test(NAME uds_strategy_20_tests COMMAND test_uds_strategy)
+
+add_test(NAME uds_encode_8_tests COMMAND test_uds_codec)
+
