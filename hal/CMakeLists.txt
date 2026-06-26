@@ -19,5 +19,5 @@ add_executable(test_uds_codec
 target_link_libraries(test_uds_codec PRIVATE hal)
 
 
-add_test(NAME uds_encode_8_tests COMMAND test_uds_codec)
+add_test(NAME uds_encode_decode_20_tests COMMAND test_uds_codec)
 

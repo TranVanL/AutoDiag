@@ -1,0 +1,1 @@
+/usr/bin/c++  -fsanitize=address -fno-omit-frame-pointer -g   CMakeFiles/test_uds_codec.dir/tests/test_uds_codec.cpp.o  -o test_uds_codec libhal.a 

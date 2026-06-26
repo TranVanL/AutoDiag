@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/diag_type.h
+cstdint
+-
+string
+-
+vector
+-
+
+../include/uds_codec.h
+diag_type.h
+../include/diag_type.h
+
+/home/worker/AutoDiag/CurrentCode/AutoDiag/hal/tests/test_uds_codec.cpp
+diag_type.h
+/home/worker/AutoDiag/CurrentCode/AutoDiag/hal/tests/diag_type.h
+uds_codec.h
+/home/worker/AutoDiag/CurrentCode/AutoDiag/hal/tests/uds_codec.h
+cstdint
+-
+iostream
+-
+vector
+-
+
