@@ -11,6 +11,7 @@ std::vector<uint8_t> makeNegativeResponse(std::uint8_t serviceId , std::uint8_t 
 }
 
 MockDiagnosticHal::MockDiagnosticHal() {
+    is_ready = true;
     initDIDDb();
     initDTCData();
 }
@@ -80,11 +81,11 @@ IDiagnosticHal::Result MockDiagnosticHal::SendAndReceive(const std::vector<uint8
     }
     
     else if (serviceID == static_cast<uint8_t>(UdsService::TesterPresent)) {
-        return  {true , {0x7E , 0x00, 0x00, 0x00 } , {}};
+        return  {true , {0x7E , 0x00 } , {}};
     }
 
     else {
-        return {false ,makeNegativeResponse(serviceID,static_cast<uint8_t>(Nrc::ServiceNotSupported)) , {}};
+        return {true ,makeNegativeResponse(serviceID,static_cast<uint8_t>(Nrc::ServiceNotSupported)) , {}};
     }
     
 }

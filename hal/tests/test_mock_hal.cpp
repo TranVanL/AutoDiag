@@ -47,6 +47,9 @@ void testReadDidVinSuccess() {
     expectTrue(result.success, "mock_read_did_vin_success_flag");
     expectTrue(result.error.empty(), "mock_read_did_vin_no_error");
     expectTrue(result.data.size() >= 4, "mock_read_did_vin_min_size");
+    if (result.data.size() < 3) {
+        return;
+    }
     expectEqByte(result.data[0], 0x62, "mock_read_did_vin_sid");
     expectEqByte(result.data[1], 0xF1, "mock_read_did_vin_did_hi");
     expectEqByte(result.data[2], 0x90, "mock_read_did_vin_did_lo");
@@ -66,6 +69,9 @@ void testReadDtcDefaultList() {
 
     expectTrue(result.success, "mock_read_dtc_success");
     expectTrue(result.data.size() > 2, "mock_read_dtc_has_payload");
+    if (result.data.size() < 2) {
+        return;
+    }
     expectEqByte(result.data[0], 0x59, "mock_read_dtc_sid");
     expectEqByte(result.data[1], 0x02, "mock_read_dtc_subfunction");
 }

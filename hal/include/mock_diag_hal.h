@@ -18,7 +18,7 @@ private:
     void initDIDDb();
     void initDTCData();
 
-    bool is_ready{false};
+    bool is_ready{true};
     std::unordered_map<uint16_t, std::vector<uint8_t>> DID_db{};
     std::vector<uint8_t> DTC_payload{};
 
