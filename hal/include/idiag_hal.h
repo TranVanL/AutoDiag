@@ -8,13 +8,15 @@
 namespace autodiag {
 
 class IDiagnosticHal {
+public:
     struct Result {
         bool success {false};
         std::vector<uint8_t> data{};
         std::string error{};
     };
+
     virtual Result SendAndReceive(const std::vector<uint8_t> &req) = 0;
-    virtual bool isReady() = 0;
+    virtual bool isReady() const = 0;
     virtual void reset() = 0;
     virtual ~IDiagnosticHal() = default;
 };
