@@ -3,6 +3,7 @@
 #include "uds_codec.h"
 
 #include <chrono>
+#include <iostream>
 #include <utility>
 
 namespace autodiag {
@@ -16,21 +17,30 @@ DiagEngine::~DiagEngine() {
 }
 
 void DiagEngine::start() {
-    if (running_.exchange(true)) {
+    bool expected = false;
+    if (!running_.compare_exchange_strong(expected, true)) {
         return;
     }
 
     stop_.store(false);
-    worker_ = std::thread(&DiagEngine::workerLoop, this);
+    try {
+        worker_ = std::thread(&DiagEngine::workerLoop, this);
+    } catch (...) {
+        running_.store(false);
+        throw;
+    }
 }
 
 bool DiagEngine::submit(const DiagRequest& req, Callback cb) {
-    if (!running_.load() || stop_.load() || !cb) {
+    if (!cb) {
         return false;
     }
 
     {
         std::lock_guard<std::mutex> lk(mu_);
+        if (!running_.load() || stop_.load()) {
+            return false;
+        }
         queue_.push(WorkItem{req, std::move(cb)});
     }
     cv_.notify_one();
@@ -100,7 +110,13 @@ void DiagEngine::workerLoop() {
 
         const auto t1 = std::chrono::steady_clock::now();
         response.latencyUs = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-        item.cb(response);
+        try {
+            item.cb(response);
+        } catch (const std::exception& ex) {
+            std::cerr << "DiagEngine callback exception: " << ex.what() << "\n";
+        } catch (...) {
+            std::cerr << "DiagEngine callback unknown exception\n";
+        }
     }
 }
 

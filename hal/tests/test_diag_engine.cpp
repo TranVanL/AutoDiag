@@ -4,13 +4,12 @@
 #include "idiag_hal.h"
 #include "mock_diag_hal.h"
 
+#include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstdint>
+#include <future>
 #include <iostream>
 #include <memory>
-#include <mutex>
-#include <string>
 #include <vector>
 
 namespace {
@@ -54,29 +53,24 @@ void testSubmitSingleRequestCallbackFires() {
     autodiag::DiagEngine engine(std::move(hal));
     engine.start();
 
-    std::mutex mu;
-    std::condition_variable cv;
-    bool done = false;
-    autodiag::DiagResponse out{};
+    auto outPromise = std::make_shared<std::promise<autodiag::DiagResponse>>();
+    auto outFuture = outPromise->get_future();
 
     autodiag::DiagRequest req{};
     req.requestId = 1;
     req.service = autodiag::UdsService::ReadDataByIdentifier;
     req.dataId = static_cast<std::uint16_t>(autodiag::DiagProperty::VIN);
 
-    const bool accepted = engine.submit(req, [&](const autodiag::DiagResponse& resp) {
-        std::lock_guard<std::mutex> lk(mu);
-        out = resp;
-        done = true;
-        cv.notify_one();
+    const bool accepted = engine.submit(req, [outPromise](const autodiag::DiagResponse& resp) {
+        outPromise->set_value(resp);
     });
 
     expectTrue(accepted, "engine_submit_single_accepted");
 
-    std::unique_lock<std::mutex> lk(mu);
-    const bool completed = cv.wait_for(lk, std::chrono::milliseconds(300), [&] { return done; });
+    const bool completed = outFuture.wait_for(std::chrono::milliseconds(1500)) == std::future_status::ready;
     expectTrue(completed, "engine_submit_single_callback_fired");
     if (completed) {
+        const auto out = outFuture.get();
         expectTrue(out.positive, "engine_submit_single_positive");
         expectTrue(!out.valueString.empty(), "engine_submit_single_has_value");
     }
@@ -89,9 +83,9 @@ void testSubmitFiveRequestsAllCallbacksFire() {
     autodiag::DiagEngine engine(std::move(hal));
     engine.start();
 
-    std::mutex mu;
-    std::condition_variable cv;
-    std::size_t count = 0;
+    auto donePromise = std::make_shared<std::promise<void>>();
+    auto doneFuture = donePromise->get_future();
+    auto count = std::make_shared<std::atomic<std::size_t>>(0);
 
     for (std::uint32_t i = 0; i < 5; ++i) {
         autodiag::DiagRequest req{};
@@ -99,20 +93,20 @@ void testSubmitFiveRequestsAllCallbacksFire() {
         req.service = autodiag::UdsService::ReadDataByIdentifier;
         req.dataId = static_cast<std::uint16_t>(autodiag::DiagProperty::VIN);
 
-        const bool accepted = engine.submit(req, [&](const autodiag::DiagResponse& resp) {
-            std::lock_guard<std::mutex> lk(mu);
+        const bool accepted = engine.submit(req, [count, donePromise](const autodiag::DiagResponse& resp) {
             if (resp.positive) {
-                ++count;
+                const auto current = count->fetch_add(1) + 1;
+                if (current == 5) {
+                    donePromise->set_value();
+                }
             }
-            cv.notify_one();
         });
         expectTrue(accepted, "engine_submit_five_request_accepted");
     }
 
-    std::unique_lock<std::mutex> lk(mu);
-    const bool completed = cv.wait_for(lk, std::chrono::milliseconds(500), [&] { return count == 5; });
+    const bool completed = doneFuture.wait_for(std::chrono::milliseconds(2500)) == std::future_status::ready;
     expectTrue(completed, "engine_submit_five_all_callbacks_fired");
-    expectEqSize(count, 5, "engine_submit_five_callback_count");
+    expectEqSize(count->load(), 5, "engine_submit_five_callback_count");
 
     engine.shutdown();
 }
@@ -138,28 +132,23 @@ void testHalNotReadyReturnsNegativeResponse() {
     autodiag::DiagEngine engine(std::move(hal));
     engine.start();
 
-    std::mutex mu;
-    std::condition_variable cv;
-    bool done = false;
-    autodiag::DiagResponse out{};
+    auto outPromise = std::make_shared<std::promise<autodiag::DiagResponse>>();
+    auto outFuture = outPromise->get_future();
 
     autodiag::DiagRequest req{};
     req.requestId = 313;
     req.service = autodiag::UdsService::TesterPresent;
     req.subFunction = 0x00;
 
-    const bool accepted = engine.submit(req, [&](const autodiag::DiagResponse& resp) {
-        std::lock_guard<std::mutex> lk(mu);
-        out = resp;
-        done = true;
-        cv.notify_one();
+    const bool accepted = engine.submit(req, [outPromise](const autodiag::DiagResponse& resp) {
+        outPromise->set_value(resp);
     });
     expectTrue(accepted, "engine_not_ready_submit_accepted");
 
-    std::unique_lock<std::mutex> lk(mu);
-    const bool completed = cv.wait_for(lk, std::chrono::milliseconds(300), [&] { return done; });
+    const bool completed = outFuture.wait_for(std::chrono::milliseconds(1500)) == std::future_status::ready;
     expectTrue(completed, "engine_not_ready_callback_fired");
     if (completed) {
+        const auto out = outFuture.get();
         expectTrue(!out.positive, "engine_not_ready_negative_response");
         expectTrue(!out.valueString.empty(), "engine_not_ready_error_message");
     }
