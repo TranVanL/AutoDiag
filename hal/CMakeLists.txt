@@ -12,6 +12,7 @@ add_library(hal STATIC
     src/dummy.cpp
     src/uds_codec.cpp
     src/mock_diag_hal.cpp
+    src/session_state.cpp
 )
 
 add_executable(test_uds_codec
@@ -23,8 +24,14 @@ add_executable(test_mock_hal
 )
 target_link_libraries(test_mock_hal PRIVATE hal)
 
+add_executable(test_session_state
+    tests/test_session_state.cpp
+)
+target_link_libraries(test_session_state PRIVATE hal)
+
 target_link_libraries(test_uds_codec PRIVATE hal)
 
 
 add_test(NAME uds_encode_decode_20_tests COMMAND test_uds_codec)
 add_test(NAME mock_hal_5_tests COMMAND test_mock_hal)
+add_test(NAME session_state_5_tests COMMAND test_session_state)
