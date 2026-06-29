@@ -28,6 +28,8 @@ public class DiagHalBridge {
 
     public static native void nativeInit(String halType);
 
+    public static native void nativeShutdown();
+
     public static boolean init(String halType) {
         if (!sNativeReady) {
             Log.e(TAG, "nativeInit skipped: JNI library not loaded");
