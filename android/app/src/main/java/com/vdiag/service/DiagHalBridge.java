@@ -44,6 +44,20 @@ public class DiagHalBridge {
         }
     }
 
+    public static boolean shutdown() {
+        if (!sNativeReady) {
+            Log.w(TAG, "nativeShutdown skipped: JNI library not loaded");
+            return false;
+        }
+        try {
+            nativeShutdown();
+            return true;
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeShutdown failed", e);
+            return false;
+        }
+    }
+
     public static boolean isNativeReady() {
         return sNativeReady;
     }

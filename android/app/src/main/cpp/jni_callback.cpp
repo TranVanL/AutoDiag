@@ -149,6 +149,7 @@ JNIEnv* JniCallbackBridge::getEnv() {
         const int tlsStatus = pthread_setspecific(g_detachKey,reinterpret_cast<void*>(1));
         if (tlsStatus != 0) {
             __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: pthread_setspecific failed");
+            g_jvm->DetachCurrentThread();
             return nullptr;
         }
         __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge: Attached to thread and register auto-detach ");

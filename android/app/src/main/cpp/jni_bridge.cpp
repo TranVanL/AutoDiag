@@ -1,18 +1,15 @@
 #include <jni.h>
 #include <android/log.h>
-#include <chrono>
 #include <memory>
 #include <string>
-#include <thread>
 #include "jni_callback.h"
 #include "diag_engine.h"
+#include "diag_type.h"
 #include "mock_diag_hal.h"
 
 #define JNI_TAG "VDiag.JNI"
 
 static std::unique_ptr<autodiag::DiagEngine> g_engine;
-
-static std::string getDummyResponse(int propertyId);
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -76,29 +73,48 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
 
     auto bridge = std::make_shared<JniCallbackBridge>(env, callback);
 
-    const int reqId = requestId;
-    const int proID = propertyID;
+    if (g_engine == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG,
+                            "nativeGetProperty: engine not initialized — call nativeInit first");
+        bridge->onError(static_cast<int>(requestId),
+                        static_cast<int>(autodiag::Nrc::RequestOutOfRange),
+                        "Engine not initialized");
+        return;
+    }
 
-    std::thread([bridge, reqId, proID]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        const std::string response = getDummyResponse(proID);
+    // Build DiagRequest — map propertyId → UDS service + dataId
+    autodiag::DiagRequest req{};
+    req.requestId = static_cast<std::uint32_t>(requestId);
+
+    const auto propId = static_cast<std::uint16_t>(static_cast<unsigned int>(propertyID));
+    if (propId == static_cast<std::uint16_t>(autodiag::DiagProperty::DtcList)) {
+        req.service      = autodiag::UdsService::ReadDTC;
+        req.subFunction  = 0x02;  // reportDTCByStatusMask
+    } else {
+        req.service = autodiag::UdsService::ReadDataByIdentifier;
+        req.dataId  = propId;
+    }
+
+    const bool queued = g_engine->submit(req, [bridge](const autodiag::DiagResponse& r) {
+        if (r.positive) {
+            bridge->onResult(r.requestId, r.valueString, r.latencyUs);
+        } else {
+            bridge->onError(r.requestId,
+                            static_cast<int>(r.nrc),
+                            autodiag::nrcToString(r.nrc));
+        }
+    });
+
+    if (queued) {
         __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
-                            "nativeGetProperty(worker): sending result for reqId=%d", reqId);
-        bridge->onResult(reqId, response, 1000);
-    }).detach();
-
-    __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
-                        "nativeGetProperty: async worker spawned");
-}
-
-static std::string getDummyResponse(int propertyId) {
-    switch (propertyId) {
-        case 0xF190: return "VINFAST12345678901";
-        case 0xF187: return "SW_V3.2.1_AAOS_HKMC";
-        case 0xFD01: return "78";
-        case 0xFE01: return "3200";
-        case 0x0104: return "92";
-        case 0x010C: return "1500";
-        default:     return "UNKNOWN_PROPERTY_0x" + std::to_string(propertyId);
+                            "nativeGetProperty: submitted to DiagEngine — reqId=%d propId=0x%X",
+                            requestId, propertyID);
+    } else {
+        __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
+                            "nativeGetProperty: engine rejected submit (stopped?) — reqId=%d",
+                            requestId);
+        bridge->onError(static_cast<int>(requestId),
+                        static_cast<int>(autodiag::Nrc::RequestOutOfRange),
+                        "Engine rejected request");
     }
 }

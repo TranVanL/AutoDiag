@@ -45,6 +45,9 @@ public class DiagCarService extends Service {
             mBinder.cleanup();
             mBinder = null;
         }
+        if (!DiagHalBridge.shutdown()) {
+            Log.w(TAG, "JNI shutdown failed or was skipped");
+        }
         mClientRegistry = null;
         super.onDestroy();
     }
