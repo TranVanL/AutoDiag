@@ -16,3 +16,11 @@
 - Phải khai báo cả `<permission>` lẫn `<uses-permission>` trong cùng manifest nếu self-signed
 - `Binder.getCallingPid/Uid()` chỉ có ý nghĩa khi gọi từ trong Binder transaction (onTransact thread); gọi ngoài trả về PID/UID của chính process
 - `enforceCallingOrSelfPermission()` throw SecurityException ngay; dùng khi muốn fail fast
+
+## Day 35 (W7D35) — Full Pipeline Audit + Lessons
+
+- Đã verify phần wiring chính đã chạy đúng hướng: Android CMake link `hal/`, JNI tạo `DiagEngine`, và request đi theo chuỗi App -> Binder -> JNI -> Engine -> MockHal -> callback.
+- Baseline HAL test đang xanh: tổng 35 test pass (`uds_encode_decode_20_tests`, `mock_hal_5_tests`, `session_state_5_tests`, `diag_engine_4_tests`).
+- Đã chuẩn hóa dữ liệu mock theo expected Day34: VIN=`VINFAST12345678901`, SW=`SW_V3.2.1_AAOS`, DTC list=`P0A00, P0562`.
+- Đã bổ sung thao tác thứ 6 từ UI: `Clear DTC (0x14)` đi full pipeline và decoder trả value `OK`.
+- Bài học chốt tuần: milestone chỉ được coi là done khi đủ cả 3 lớp: wiring đúng, dữ liệu đúng contract, và test regression vẫn xanh sau khi sửa.

@@ -37,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button mGetDtcList;
 
+    private Button mClearDtc;
+
     private final AtomicInteger mNextRequestId = new AtomicInteger(1);
 
 
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
             mGetSOC.setEnabled(true);
             mGetRPM.setEnabled(true);
             mGetDtcList.setEnabled(true);
+            mClearDtc.setEnabled(true);
             mGetVinButton.setEnabled(true);
             mGetSwVersionButton.setEnabled(true);
         }
@@ -72,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
             mGetSOC.setEnabled(false);
             mGetRPM.setEnabled(false);
             mGetDtcList.setEnabled(false);
+            mClearDtc.setEnabled(false);
             Toast.makeText(MainActivity.this, "Service disconnected !!!", Toast.LENGTH_LONG).show();
         }
     };
@@ -112,12 +116,14 @@ public class MainActivity extends AppCompatActivity {
         mGetSOC = findViewById(R.id.btn_get_soc);
         mGetRPM = findViewById(R.id.btn_get_rpm);
         mGetDtcList = findViewById(R.id.btn_get_dtc_list);
+        mClearDtc = findViewById(R.id.btn_clear_dtc);
 
         mGetVinButton.setEnabled(false);
         mGetSwVersionButton.setEnabled(false);
         mGetSOC.setEnabled(false);
         mGetRPM.setEnabled(false);
         mGetDtcList.setEnabled(false);
+        mClearDtc.setEnabled(false);
 
 
         mGetVinButton.setOnClickListener(v -> requestProperty(0xF190, "VIN"));
@@ -125,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
         mGetSOC.setOnClickListener(view -> requestProperty(0x0105 , "SOC"));
         mGetRPM.setOnClickListener(view -> requestProperty(0x010C , "RPM"));
         mGetDtcList.setOnClickListener(view -> requestProperty(0xF191 , "DtcList"));
+        mClearDtc.setOnClickListener(view -> requestProperty(0xF193 , "DtcClear"));
 
         findViewById(R.id.btn_crash_app).setOnClickListener(v -> {
             Log.w(TAG, "💥 Self-killing client process...");

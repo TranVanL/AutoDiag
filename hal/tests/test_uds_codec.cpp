@@ -115,11 +115,22 @@ void expectStrEq(const std::string& actual, const std::string& expected, const c
 void testDecodeVinPositive() {
     const std::vector<std::uint8_t> input = {
         0x62, 0xF1, 0x90,
-        'V', 'I', 'N', 'F', 'A', 'S', 'T'
+        'V', 'I', 'N', 'F', 'A', 'S', 'T',
+        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1'
     };
     const DiagResponse response = autodiag::decode(101, input);
     expectBoolEq(response.positive, true, "decode_vin_positive");
-    expectStrEq(response.valueString, "VINFAST", "decode_vin_value");
+    expectStrEq(response.valueString, "VINFAST12345678901", "decode_vin_value");
+}
+
+void testDecodeSoftwareVersionPositive() {
+    const std::vector<std::uint8_t> input = {
+        0x62, 0xF1, 0x87,
+        'S', 'W', '_', 'V', '3', '.', '2', '.', '1', '_', 'A', 'A', 'O', 'S'
+    };
+    const DiagResponse response = autodiag::decode(150, input);
+    expectBoolEq(response.positive, true, "decode_sw_positive");
+    expectStrEq(response.valueString, "SW_V3.2.1_AAOS", "decode_sw_value");
 }
 
 void testDecodeRpmPositive() {
@@ -169,6 +180,23 @@ void testDecodeWrongServiceId() {
     const DiagResponse response = autodiag::decode(108, input);
     expectBoolEq(response.positive, false, "decode_wrong_service_positive_flag");
     expectNrcEq(response.nrc, Nrc::ServiceNotSupported, "decode_wrong_service_nrc");
+}
+
+void testDecodeDtcListPositive() {
+    const std::vector<std::uint8_t> input = {
+        0x59, 0x02,
+        'P', '0', 'A', '0', '0', ',', ' ', 'P', '0', '5', '6', '2'
+    };
+    const DiagResponse response = autodiag::decode(151, input);
+    expectBoolEq(response.positive, true, "decode_dtc_positive");
+    expectStrEq(response.valueString, "P0A00, P0562", "decode_dtc_value");
+}
+
+void testDecodeClearDtcPositive() {
+    const std::vector<std::uint8_t> input = {0x54, 0xFF, 0xFF, 0xFF};
+    const DiagResponse response = autodiag::decode(152, input);
+    expectBoolEq(response.positive, true, "decode_clear_dtc_positive");
+    expectStrEq(response.valueString, "OK", "decode_clear_dtc_value");
 }
 
 void testDecodeAllNrcCodes() {
@@ -221,6 +249,7 @@ int main() {
     testEncodeTesterPresent();
     testEncodeReadDidWithPayloadAppended();
     testDecodeVinPositive();
+    testDecodeSoftwareVersionPositive();
     testDecodeRpmPositive();
     testDecodeSocPositive();
     testDecodeSecurityAccessDenied();
@@ -228,6 +257,8 @@ int main() {
     testDecodeTruncatedPositiveFrame();
     testDecodeEmptyFrame();
     testDecodeWrongServiceId();
+    testDecodeDtcListPositive();
+    testDecodeClearDtcPositive();
     testDecodeAllNrcCodes();
     testDecodeMultiByteSocAndRpm();
     testDecodeVinUtf8Payload();

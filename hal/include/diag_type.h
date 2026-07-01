@@ -24,6 +24,7 @@ enum class DiagProperty : std::uint16_t {
     SOC         = 0x0105,
     RPM         = 0x010C,
     DtcList     = 0xF191,
+    DtcClear    = 0xF193,
     Timestamp   = 0xF192,
 };
 

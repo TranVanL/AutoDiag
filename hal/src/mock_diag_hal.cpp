@@ -19,11 +19,12 @@ MockDiagnosticHal::MockDiagnosticHal() {
 void MockDiagnosticHal::initDIDDb() {
     DID_db.clear();
     DID_db[static_cast<uint16_t>(DiagProperty::VIN)] = {
-        'V' , 'I' , 'N' , '1' , '2' ,'3' ,'4' ,'5' 
+        'V' , 'I' , 'N' , 'F' , 'A' , 'S' , 'T' ,
+        '1' , '2' , '3' , '4' , '5' , '6' , '7' , '8' , '9' , '0' , '1'
     };
 
     DID_db[static_cast<uint16_t>(DiagProperty::SoftwareVer)] = {
-        'V' , 'E' , 'R' , '0' , '.' ,'0' ,'0' ,'1' 
+        'S' , 'W' , '_' , 'V' , '3' , '.' , '2' , '.' , '1' , '_' , 'A' , 'A' , 'O' , 'S'
     };
 
     DID_db[static_cast<uint16_t>(DiagProperty::SOC)] = {78};
@@ -91,7 +92,10 @@ IDiagnosticHal::Result MockDiagnosticHal::SendAndReceive(const std::vector<uint8
 }
 
 void MockDiagnosticHal::initDTCData(){
-    DTC_payload = { 'P' , '0' , '1' , '2' , '3' };
+    DTC_payload = {
+        'P' , '0' , 'A' , '0' , '0' , ',' , ' ' ,
+        'P' , '0' , '5' , '6' , '2'
+    };
 }
 
 

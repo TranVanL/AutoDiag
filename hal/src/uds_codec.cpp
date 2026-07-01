@@ -96,6 +96,10 @@ DiagResponse decode(std::uint32_t reqId, const std::vector<std::uint8_t>& bytes)
 
         resp.valueString.assign(resp.data.begin(), resp.data.end());
     }
+    else if (sid == 0x54) {
+        resp.data.assign(bytes.begin() + 1, bytes.end());
+        resp.valueString = "OK";
+    }
     else {
         resp.data.assign(bytes.begin() + 1, bytes.end());
     }

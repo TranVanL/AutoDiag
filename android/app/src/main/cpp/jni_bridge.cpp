@@ -90,6 +90,8 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
     if (propId == static_cast<std::uint16_t>(autodiag::DiagProperty::DtcList)) {
         req.service      = autodiag::UdsService::ReadDTC;
         req.subFunction  = 0x02;  // reportDTCByStatusMask
+    } else if (propId == static_cast<std::uint16_t>(autodiag::DiagProperty::DtcClear)) {
+        req.service = autodiag::UdsService::ClearDTC;
     } else {
         req.service = autodiag::UdsService::ReadDataByIdentifier;
         req.dataId  = propId;
