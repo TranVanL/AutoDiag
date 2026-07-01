@@ -2,4 +2,14 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="diag_bg">#111315</color>
+    <color name="diag_surface">#1A1F23</color>
+    <color name="diag_surface_alt">#242C31</color>
+    <color name="diag_stroke">#344048</color>
+    <color name="diag_accent">#00D4AA</color>
+    <color name="diag_accent_soft">#143F39</color>
+    <color name="diag_text_primary">#F3F7F6</color>
+    <color name="diag_text_secondary">#9FB1AF</color>
+    <color name="diag_error">#FF6B6B</color>
+    <color name="diag_warning">#F4B860</color>
 </resources>

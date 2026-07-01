@@ -1,5 +1,11 @@
 <resources>
     <string name="app_name">VDiag</string>
+    <string name="diag_title">Vehicle Diagnostics</string>
+    <string name="diag_subtitle">AAOS Binder to JNI to UDS pipeline demo</string>
+    <string name="diag_status_connected">Connected to DiagCarService</string>
+    <string name="diag_status_connecting">Connecting to DiagCarService...</string>
+    <string name="diag_results_title">Latest Results</string>
+    <string name="diag_waiting">Waiting for first diagnostic response</string>
     <string name="permission_diagnose_description">
     Allows access to vehicle diagnostic data including VIN, DTC, and sensor readings.
     </string>
