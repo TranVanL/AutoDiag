@@ -180,6 +180,10 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         mStatusDot.setBackgroundTintList(getColorStateList(R.color.diag_accent));
     }
 
+    private void setStatusConnected() {
+        setStatusConnected(getString(R.string.diag_status_connected));
+    }
+
     private void setStatusConnecting() {
         setStatusConnecting(getString(R.string.diag_status_connecting));
     }
