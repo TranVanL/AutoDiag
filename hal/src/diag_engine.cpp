@@ -36,12 +36,17 @@ bool DiagEngine::submit(const DiagRequest& req, Callback cb) {
         return false;
     }
 
+    WorkItem item{req, std::move(cb)};
+    if (!item.session.transition(State::Pending)) {
+        return false;
+    }
+
     {
         std::lock_guard<std::mutex> lk(mu_);
         if (!running_.load() || stop_.load()) {
             return false;
         }
-        queue_.push(WorkItem{req, std::move(cb)});
+        queue_.push(std::move(item));
     }
     cv_.notify_one();
     return true;
@@ -110,6 +115,13 @@ void DiagEngine::workerLoop() {
 
         const auto t1 = std::chrono::steady_clock::now();
         response.latencyUs = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+
+        if (response.positive) {
+            item.session.transition(State::Done);
+        } else {
+            item.session.transition(State::Error);
+        }
+
         try {
             item.cb(response);
         } catch (const std::exception& ex) {
@@ -117,6 +129,8 @@ void DiagEngine::workerLoop() {
         } catch (...) {
             std::cerr << "DiagEngine callback unknown exception\n";
         }
+
+        item.session.reset();
     }
 }
 

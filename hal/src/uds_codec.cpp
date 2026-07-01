@@ -61,6 +61,7 @@ DiagResponse decode(std::uint32_t reqId, const std::vector<std::uint8_t>& bytes)
     resp.positive = true;
 
     if (sid == 0x62) {
+
         if (bytes.size() < 3) {
             resp.positive = false;
             resp.nrc = Nrc::RequestOutOfRange;
@@ -73,7 +74,7 @@ DiagResponse decode(std::uint32_t reqId, const std::vector<std::uint8_t>& bytes)
 
         resp.data.assign(bytes.begin() + 3, bytes.end());
 
-        if (did == static_cast<std::uint16_t>(DiagProperty::VIN)) {
+        if (did == static_cast<std::uint16_t>(DiagProperty::VIN) || did == static_cast<std::uint16_t>(DiagProperty::SoftwareVer) ) {
             resp.valueString.assign(resp.data.begin(), resp.data.end());
         } else if (did == static_cast<std::uint16_t>(DiagProperty::RPM) && resp.data.size() >= 2) {
             const auto raw = static_cast<std::uint16_t>(resp.data[0] << 8U) |
@@ -82,7 +83,20 @@ DiagResponse decode(std::uint32_t reqId, const std::vector<std::uint8_t>& bytes)
         } else if (did == static_cast<std::uint16_t>(DiagProperty::SOC) && !resp.data.empty()) {
             resp.valueString = std::to_string(resp.data[0]);
         }
-    } else {
+    }
+    else if (sid == 0x59) {
+
+        if (bytes.size() < 2) {
+            resp.positive = false;
+            resp.nrc = Nrc::RequestOutOfRange;
+            return resp;
+        }
+
+        resp.data.assign(bytes.begin() + 2, bytes.end());
+
+        resp.valueString.assign(resp.data.begin(), resp.data.end());
+    }
+    else {
         resp.data.assign(bytes.begin() + 1, bytes.end());
     }
 

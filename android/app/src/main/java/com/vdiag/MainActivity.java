@@ -18,6 +18,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
 
@@ -28,6 +30,15 @@ public class MainActivity extends AppCompatActivity {
     private Button mGetVinButton;
 
     private Button mGetSwVersionButton;
+
+    private Button mGetSOC;
+
+    private Button mGetRPM;
+
+    private Button mGetDtcList;
+
+    private final AtomicInteger mNextRequestId = new AtomicInteger(1);
+
 
     private boolean mIsBound = false;
 
@@ -44,6 +55,9 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, "Failed to register callback", e);
             }
             Toast.makeText(MainActivity.this, "Service connected !!!", Toast.LENGTH_LONG).show();
+            mGetSOC.setEnabled(true);
+            mGetRPM.setEnabled(true);
+            mGetDtcList.setEnabled(true);
             mGetVinButton.setEnabled(true);
             mGetSwVersionButton.setEnabled(true);
         }
@@ -55,6 +69,9 @@ public class MainActivity extends AppCompatActivity {
             mIsBound = false;
             mGetVinButton.setEnabled(false);
             mGetSwVersionButton.setEnabled(false);
+            mGetSOC.setEnabled(false);
+            mGetRPM.setEnabled(false);
+            mGetDtcList.setEnabled(false);
             Toast.makeText(MainActivity.this, "Service disconnected !!!", Toast.LENGTH_LONG).show();
         }
     };
@@ -65,7 +82,6 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "onResult - callback from service to client !!! [reqId:" + requestId + "] Value: " + value);
             runOnUiThread(() -> {
                 mResultText.setText("RequestID : " + requestId + "\nValue : " + value + "\nLatency : " + latencyUs );
-                Toast.makeText(MainActivity.this, "Result: " + value, Toast.LENGTH_SHORT).show();
             });
         }
 
@@ -74,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "onError - callback from service to client !!! [reqId:" + requestId + "] Error: " + errorCode + " - " + errorMsg);
             runOnUiThread(() -> {
                 mResultText.setText("RequestID : " + requestId + "\nErrorCode : " + errorCode + "\nerrorMsg : " + errorMsg );
-                Toast.makeText(MainActivity.this, "Error: " + errorCode, Toast.LENGTH_SHORT).show();
             });
         }
     };
@@ -94,12 +109,23 @@ public class MainActivity extends AppCompatActivity {
         mResultText = findViewById(R.id.result_text);
         mGetVinButton = findViewById(R.id.btn_get_vin);
         mGetSwVersionButton = findViewById(R.id.btn_get_sw_version);
+        mGetSOC = findViewById(R.id.btn_get_soc);
+        mGetRPM = findViewById(R.id.btn_get_rpm);
+        mGetDtcList = findViewById(R.id.btn_get_dtc_list);
 
         mGetVinButton.setEnabled(false);
         mGetSwVersionButton.setEnabled(false);
+        mGetSOC.setEnabled(false);
+        mGetRPM.setEnabled(false);
+        mGetDtcList.setEnabled(false);
+
 
         mGetVinButton.setOnClickListener(v -> requestProperty(0xF190, "VIN"));
         mGetSwVersionButton.setOnClickListener(v -> requestProperty(0xF187 , "SW_VERSION"));
+        mGetSOC.setOnClickListener(view -> requestProperty(0x0105 , "SOC"));
+        mGetRPM.setOnClickListener(view -> requestProperty(0x010C , "RPM"));
+        mGetDtcList.setOnClickListener(view -> requestProperty(0xF191 , "DtcList"));
+
         findViewById(R.id.btn_crash_app).setOnClickListener(v -> {
             Log.w(TAG, "💥 Self-killing client process...");
             android.os.Process.killProcess(android.os.Process.myPid());
@@ -114,11 +140,10 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             DiagRequest request = new DiagRequest();
-            request.requestId = (int) (System.currentTimeMillis() % 1000);
+            request.requestId = mNextRequestId.getAndIncrement();
             request.propertyId = propertyId;
 
             Log.i(TAG , "Send DiagRequest " + request.requestId + " for " + propertyName + " to Service");
-            Toast.makeText(MainActivity.this , "Send request: " + propertyName , Toast.LENGTH_SHORT).show();
             mDiagService.getProperty(request);
         }
         catch (RemoteException e) {

@@ -2,6 +2,7 @@
 
 #include "diag_type.h"
 #include "idiag_hal.h"
+#include "session_state.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -11,6 +12,7 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <utility>
 
 namespace autodiag {
 
@@ -35,6 +37,12 @@ private:
     struct WorkItem {
         DiagRequest req{};
         Callback cb{};
+        SessionStateMachine session{};
+
+        WorkItem() = default;
+        WorkItem(DiagRequest request, Callback callback)
+            : req(std::move(request)), cb(std::move(callback)) {
+        }
     };
 
     std::unique_ptr<IDiagnosticHal> hal_{};
