@@ -126,16 +126,3 @@ Với Day10, checklist pass thực chiến tối thiểu gồm những test case
 Nếu senior hỏi “what can still fail after Day10”, bạn liệt kê gì?
 Bạn tóm tắt technical debt còn lại từ Day10 trước khi lên JNI như thế nào?
 Checklist cross-cutting cấp senior cho Day1-Day10
-
-Đâu là API boundary rõ nhất của hệ thống ở tuần 1-2?
-Đâu là trust boundary rõ nhất của hệ thống ở tuần 1-2?
-Đâu là chỗ có khả năng tạo deadlock hoặc ANR trong thiết kế hiện tại?
-Đâu là điểm có nguy cơ memory leak cao nhất trước Day11?
-Đâu là invariant quan trọng nhất của callback lifecycle?
-Nếu phải viết threat model mini cho Day1-Day10, bạn viết 5 threat nào?
-Nếu phải thêm observability ngay bây giờ, bạn thêm metric nào ở service?
-Nếu phải onboard intern vào code này, 3 file nào bắt họ đọc đầu tiên?
-Điều gì đang “just enough” và điều gì đang “under-engineered”?
-Một thay đổi nhỏ nào có thể phá vỡ compatibility AIDL và cách phòng tránh?
-Bạn sẽ commit message chuẩn hóa thế nào để trace từ requirement tới code?
-Nếu rollback nhanh về mốc Day10, file nào là critical path cần giữ nguyên?
