@@ -8,7 +8,6 @@ Vì sao nên bắt đầu bằng nativeInit dummy trước native business logic
 JNI local ref và global ref khác nhau ở điểm cốt lõi nào?
 Vì sao FindClass trên worker thread có thể fail?
 Nếu nativeInit fail, service hoặc app nên phản ứng thế nào?
-Checkpoint Day11 cần verify những gì để xem JNI skeleton đã sạch?
 Nếu interview hỏi “why cache in JNI_OnLoad”, bạn trả lời sao?
 
 Day12: JNI_OnLoad cache class và method ID
@@ -35,7 +34,6 @@ Service onCreate nên gọi nativeInit ở đâu và vì sao?
 Nếu nativeInit fail, cleanup cần làm gì để tránh trạng thái nửa sống?
 Điểm khác nhau giữa verify build pass và verify runtime pass ở JNI là gì?
 Làm sao biết Logcat đang đi qua đúng lớp bridge?
-Nếu interview hỏi “what did Day13 de-risk”, bạn trả lời sao?
 
 Day14: nativeGetProperty sync path
 
@@ -61,7 +59,6 @@ Nếu app force-stop, native state nào cần được reset?
 Làm sao biết không còn local ref overflow hoặc global ref table overflow?
 Thread detach trong JNI có thể gây lỗi kiểu nào nếu quên xử lý?
 Nếu interview hỏi “what are the top JNI pitfalls”, bạn nêu gì?
-Checkpoint Day15 cần pass những test nào để coi JNI ổn?
 
 Day16: UDS codec và diag types
 
@@ -70,7 +67,6 @@ Vì sao nên model UDS service, property và NRC rõ ràng từ đầu?
 encode(UdsService::ReadDataByIdentifier) phải tạo frame gì?
 Vì sao ClearDTC hoặc TesterPresent cần test riêng?
 Diagnostic request và diagnostic response nên tách ra sao?
-Mục tiêu của Day16 là codec đúng hay business logic đúng?
 Làm sao biết encode/decode coverage đã đủ để đi tiếp?
 Nếu byte payload sai định dạng, codec nên trả lỗi gì?
 Vì sao nên có helper nrcToString ngay từ đầu?
