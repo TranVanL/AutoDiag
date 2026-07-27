@@ -17,7 +17,8 @@ public class DiagCarService extends Service {
         Log.i(TAG, "DiagCarService onCreate");
 
         // Initialize JNI bridge once service starts.
-        if (!DiagHalBridge.init("doip:10.0.2.2:13400")) {
+        // Use 127.0.0.1 with adb reverse tcp:13400 tcp:13400 to connect to host simulator
+        if (!DiagHalBridge.init("doip:127.0.0.1:13400")) {
             Log.e(TAG, "JNI init failed, service runs in degraded mode");
         }
 

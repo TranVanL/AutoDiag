@@ -30,6 +30,8 @@ public:
     bool submit(const DiagRequest& req, Callback cb);
     void shutdown();
     std::size_t pendingCount() const;
+    
+    IDiagnosticHal* getHal() const { return hal_.get(); }
 
 private:
     void workerLoop();

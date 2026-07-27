@@ -30,6 +30,10 @@ DoipDiagnosticHal::DoipDiagnosticHal(std::string host, uint16_t port)
     : host_(std::move(host)), port_(port) {
     std::lock_guard<std::mutex> lock(socket_mutex_);
     isReady_ = connect();
+    if (!isReady_) {
+        // Connection failed in constructor - will attempt lazy reconnect on first request
+        // This is intentional: HAL must be created successfully, but connection can be deferred
+    }
 }
 
 DoipDiagnosticHal::~DoipDiagnosticHal() {
@@ -149,6 +153,11 @@ bool DoipDiagnosticHal::connect() {
         isReady_ = false;
         return false;
     }
+    
+    // Socket created - now set options and connect
+#ifdef __ANDROID__
+    __android_log_print(ANDROID_LOG_DEBUG, "DoIP.HAL", "Connecting to %s:%u", host_.c_str(), port_);
+#endif
 
     struct sockaddr_in server_addr{};
     server_addr.sin_family = AF_INET;
@@ -157,6 +166,9 @@ bool DoipDiagnosticHal::connect() {
         close(sockfd_);
         sockfd_ = -1;
         isReady_ = false;
+#ifdef __ANDROID__
+        __android_log_print(ANDROID_LOG_ERROR, "DoIP.HAL", "inet_pton failed for host=%s", host_.c_str());
+#endif
         return false;
     }
 
@@ -175,8 +187,15 @@ bool DoipDiagnosticHal::connect() {
         close(sockfd_);
         sockfd_ = -1;
         isReady_ = false;
+#ifdef __ANDROID__
+        __android_log_print(ANDROID_LOG_ERROR, "DoIP.HAL", "connect failed to %s:%u (errno=%d)", host_.c_str(), port_, errno);
+#endif
         return false;
     }
+    
+#ifdef __ANDROID__
+    __android_log_print(ANDROID_LOG_INFO, "DoIP.HAL", "Connected to DoIP server %s:%u", host_.c_str(), port_);
+#endif
 
     isReady_ = true;
     return true;
