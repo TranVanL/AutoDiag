@@ -97,11 +97,13 @@ void DiagEngine::workerLoop() {
         DiagResponse response{};
         response.requestId = item.req.requestId;
 
-        if (hal_ == nullptr || !hal_->isReady()) {
+        if (hal_ == nullptr) {
             response.positive = false;
             response.nrc = Nrc::EngineNotReady;
-            response.valueString = "HAL not ready";
+            response.valueString = "HAL is null";
         } else {
+            // hal_->isReady() is NOT checked here intentionally:
+            // SendAndReceive performs lazy reconnect if socket is down.
             const auto encoded = encode(item.req);
             const auto halResult = hal_->SendAndReceive(encoded);
             if (!halResult.success) {

@@ -6,6 +6,10 @@
 #include <cstring>
 #include <sys/types.h>
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
+
 #if defined(_WIN32)
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -30,10 +34,6 @@ DoipDiagnosticHal::DoipDiagnosticHal(std::string host, uint16_t port)
     : host_(std::move(host)), port_(port) {
     std::lock_guard<std::mutex> lock(socket_mutex_);
     isReady_ = connect();
-    if (!isReady_) {
-        // Connection failed in constructor - will attempt lazy reconnect on first request
-        // This is intentional: HAL must be created successfully, but connection can be deferred
-    }
 }
 
 DoipDiagnosticHal::~DoipDiagnosticHal() {
@@ -93,15 +93,11 @@ DoipDiagnosticHal::Result DoipDiagnosticHal::SendAndReceive(const std::vector<ui
     const std::uint16_t respMessageType = readU16(&responseHeader[2]);
     const std::uint32_t respPayloadLength = readU32(&responseHeader[4]);
 
+    // Validate header: version must be 0x02, inverse must be 0xFD (= ~0x02 as uint8)
     if (respProtocolVersion != DoipProtocolVersion || respInverseProtocolVersion != DoipInverseProtocolVersion) {
         disconnect();
         return {false, {}, "Invalid DoIP protocol version in response!"};
     }
-
-    if (respProtocolVersion != ~respInverseProtocolVersion) {
-        disconnect();
-        return {false, {}, "Invalid DoIP inverse protocol version in response!"};
-    } 
 
     if (respMessageType != DoipMessageTypeDiagnostic) {
         disconnect();

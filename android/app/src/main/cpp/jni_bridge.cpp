@@ -105,17 +105,6 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
         req.dataId  = propId;
     }
 
-    // Check if HAL is actually ready (connection established)
-    if (!g_engine->getHal()->isReady()) {
-        __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
-                            "nativeGetProperty: HAL not ready (connection failed) — reqId=%d",
-                            requestId);
-        bridge->onError(static_cast<int>(requestId),
-                        static_cast<int>(autodiag::Nrc::EngineNotReady),
-                        "HAL not connected to DoIP server");
-        return;
-    }
-
     const bool queued = g_engine->submit(req, [bridge](const autodiag::DiagResponse& r) {
         if (r.positive) {
             bridge->onResult(r.requestId, r.valueString, r.latencyUs);
