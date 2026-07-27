@@ -99,14 +99,14 @@ void DiagEngine::workerLoop() {
 
         if (hal_ == nullptr || !hal_->isReady()) {
             response.positive = false;
-            response.nrc = Nrc::RequestOutOfRange;
+            response.nrc = Nrc::EngineNotReady;
             response.valueString = "HAL not ready";
         } else {
             const auto encoded = encode(item.req);
             const auto halResult = hal_->SendAndReceive(encoded);
             if (!halResult.success) {
                 response.positive = false;
-                response.nrc = Nrc::RequestOutOfRange;
+                response.nrc = Nrc::CommunicationError;
                 response.valueString = halResult.error;
             } else {
                 response = decode(item.req.requestId, halResult.data);

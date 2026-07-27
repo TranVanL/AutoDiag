@@ -11,6 +11,8 @@ add_library(vdiag_hal STATIC
     src/dummy.cpp
     src/uds_codec.cpp
     src/mock_diag_hal.cpp
+    src/hal_factory.cpp
+    src/doip_diag_hal.cpp
     src/session_state.cpp
     src/diag_engine.cpp
 )
@@ -18,6 +20,9 @@ target_include_directories(vdiag_hal PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(vdiag_hal PUBLIC Threads::Threads)
+if (WIN32)
+    target_link_libraries(vdiag_hal PUBLIC ws2_32)
+endif()
 
 if (AUTODIAG_HAL_BUILD_TESTS AND NOT ANDROID)
     enable_testing()

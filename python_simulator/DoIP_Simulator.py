@@ -6,7 +6,7 @@ import threading
 from dataclasses import dataclass
 from typing import Dict, List 
 
-HOST = "0.0.0.0"
+HOST = "127.0.0.1"  # localhost
 # DoIP is transport frame use TCP on port 13400
 PORT = 13400 
 

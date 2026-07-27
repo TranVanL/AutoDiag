@@ -17,7 +17,7 @@ public class DiagCarService extends Service {
         Log.i(TAG, "DiagCarService onCreate");
 
         // Initialize JNI bridge once service starts.
-        if (!DiagHalBridge.init("mock")) {
+        if (!DiagHalBridge.init("doip:10.0.2.2:13400")) {
             Log.e(TAG, "JNI init failed, service runs in degraded mode");
         }
 

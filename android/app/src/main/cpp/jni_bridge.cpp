@@ -5,7 +5,7 @@
 #include "jni_callback.h"
 #include "diag_engine.h"
 #include "diag_type.h"
-#include "mock_diag_hal.h"
+#include "hal_factory.h"
 
 #define JNI_TAG "VDiag.JNI"
 
@@ -33,7 +33,15 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
     __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
                         "nativeInit: creating DiagEngine with halType=%s", halTypeStr.c_str());
 
-    auto hal = std::make_unique<autodiag::MockDiagnosticHal>();
+    auto factory = std::make_unique<autodiag::HalFactory>();
+    std::unique_ptr<autodiag::IDiagnosticHal> hal;
+    try {
+        hal = factory->createHal(halTypeStr);
+    } catch (const std::exception& ex) {
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG,
+                            "nativeInit: failed to create HAL: %s", ex.what());
+        return;
+    }
     g_engine = std::make_unique<autodiag::DiagEngine>(std::move(hal));
     g_engine->start();
 
@@ -77,7 +85,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
         __android_log_print(ANDROID_LOG_ERROR, JNI_TAG,
                             "nativeGetProperty: engine not initialized — call nativeInit first");
         bridge->onError(static_cast<int>(requestId),
-                        static_cast<int>(autodiag::Nrc::RequestOutOfRange),
+                        static_cast<int>(autodiag::Nrc::EngineNotReady),
                         "Engine not initialized");
         return;
     }
@@ -116,7 +124,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
                             "nativeGetProperty: engine rejected submit (stopped?) — reqId=%d",
                             requestId);
         bridge->onError(static_cast<int>(requestId),
-                        static_cast<int>(autodiag::Nrc::RequestOutOfRange),
+                        static_cast<int>(autodiag::Nrc::EngineNotReady),
                         "Engine rejected request");
     }
 }

@@ -21,4 +21,9 @@ public:
     virtual ~IDiagnosticHal() = default;
 };
 
-}
+enum class HalType {
+    Mock,
+    Doip
+};
+
+} // namespace autodiag

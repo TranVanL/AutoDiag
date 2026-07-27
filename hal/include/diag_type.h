@@ -36,6 +36,9 @@ enum class Nrc : std::uint8_t {
     AuthenticationRequired              = 0x14,
     RequestOutOfRange                   = 0x31,
     SecurityAccessRequestSequenceError  = 0x33,
+    GeneralProgrammingFailure           = 0x72,
+    CommunicationError                  = 0xFE, // SDK Internal
+    EngineNotReady                      = 0xFF, // SDK Internal
 };
 
 struct DiagRequest {
@@ -79,6 +82,8 @@ inline std::string nrcToString(Nrc nrc) {
         case Nrc::AuthenticationRequired: return "AuthenticationRequired";
         case Nrc::RequestOutOfRange: return "RequestOutOfRange";
         case Nrc::SecurityAccessRequestSequenceError: return "SecurityAccessRequestSequenceError";
+        case Nrc::CommunicationError: return "CommunicationError";
+        case Nrc::EngineNotReady: return "EngineNotReady";
         default: return "UnknownNrc";
     }
 }
