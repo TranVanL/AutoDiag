@@ -11,8 +11,8 @@ on:
     branches: [ "main" ]
 
 env:
-  ANDROID_SDK_ROOT: ${{ runner.workspace }}/android-sdk
-  NDK_VERSION: 26.1.10909125
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+  NDK_VERSION: "26.1.10909125"
 
 jobs:
   # Job 1 : Build Native C++ , HAL code using CMake
