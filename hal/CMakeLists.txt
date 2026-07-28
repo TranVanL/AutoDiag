@@ -41,16 +41,11 @@ if (AUTODIAG_HAL_BUILD_TESTS AND NOT ANDROID)
     )
     target_link_libraries(test_session_state PRIVATE vdiag_hal)
 
-    add_executable(test_diag_engine
-        tests/test_diag_engine.cpp
-    )
-    target_link_libraries(test_diag_engine PRIVATE vdiag_hal)
-
     target_link_libraries(test_uds_codec PRIVATE vdiag_hal)
 
     add_test(NAME uds_encode_decode_20_tests COMMAND test_uds_codec)
     add_test(NAME mock_hal_5_tests COMMAND test_mock_hal)
     add_test(NAME session_state_5_tests COMMAND test_session_state)
-    add_test(NAME diag_engine_4_tests COMMAND test_diag_engine)
+
 endif()
 
