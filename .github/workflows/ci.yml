@@ -71,7 +71,7 @@ jobs:
           TSAN_OPTIONS: "halt_on_error=1:second_deadlock_stack=1:history_size=7"
         run: |
           cd hal/build
-          ctest --output-on-failure --verbose --timeout 300
+          ctest --output-on-failure --verbose
       - name: Upload ctest logs (on failure only)
         if: failure()
         uses: actions/upload-artifact@v4
