@@ -159,7 +159,7 @@ jobs:
           cd python_simulator
           
           # Start server in background
-          python3 doip_server.py &
+          python3 DoIP_Simulator.py &
           SERVER_PID=$!
           echo "Server started (PID=$SERVER_PID)"
           
