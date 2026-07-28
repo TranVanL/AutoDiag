@@ -47,7 +47,7 @@ jobs:
 
       - name: Cache Cmake build 
         id: cache-cmake
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: hal/build
           key: cmake-${{ matrix.sanitizer }}-${{ hashFiles('hal/CMakeLists.txt', 'hal/src/**', 'hal/include/**') }}
@@ -72,7 +72,7 @@ jobs:
           ctest --output-on-failure --verbose
       - name: Upload ctest logs (on failure only)
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ctest-logs-${{ matrix.sanitizer }}
           path: | 
@@ -96,10 +96,10 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK 
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       
       - name: Cache Gradle packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with: 
           path: |
             ~/.gradle/caches
@@ -107,7 +107,7 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-
       - name: Cache Android NDK
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /opt/android-ndk-${{ env.NDK_VERSION }}
           key: android-ndk-${{ env.NDK_VERSION }}
@@ -128,7 +128,7 @@ jobs:
           fi
           ls -lh app-debug.apk
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-debug.apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -180,7 +180,7 @@ jobs:
           
       - name: Upload simulator log (on failure)
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sim-log
           path: python_simulator/*.log
