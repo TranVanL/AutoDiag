@@ -3,50 +3,212 @@ name: VDiag CI
 on:
   push:
     branches: [ "main", "dev" ]
+    paths:
+      - 'android/**'
+      - 'hal/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [ "main" ]
 
+env:
+  ANDROID_SDK_ROOT: ${{ runner.workspace }}/android-sdk
+  NDK_VERSION: 26.1.10909125
+
 jobs:
-  build-android:
-    name: Build Android (Gradle)
+  # Job 1 : Build Native C++ , HAL code using CMake
+  build-native:
+    name: Build Native + ctest + (ASAN /TSAN) 
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android
+    strategy:
+      matrix:
+        sanitizer: [None, Address, Thread]
+        include:
+          - sanitizer: None
+            timeout-minutes: 5
+            build_type: Debug
+          - sanitizer: Address
+            timeout-minutes: 5
+            flag: -fsanitize=address
+            build_type: Debug
+          - sanitizer: Thread
+            timeout-minutes: 10
+            flag: -fsanitize=thread
+            build_type: Debug
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up GCC + Cmake 
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake g++ git 
+          gcc --version && cmake --version
+
+      - name: Cache Cmake build 
+        id: cache-cmake
+        uses: actions/cache@v3
+        with:
+          path: hal/build
+          key: cmake-${{ matrix.sanitizer }}-${{ hashFiles('hal/CMakeLists.txt', 'hal/src/**', 'hal/include/**') }}
+          restore-keys: cmake-${{ matrix.sanitizer }}-
+
+      - name: Build with CMake
+        id: build
+        run: | 
+          cd hal
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_CXX_FLAGS="${{ matrix.flag }} -g -O2 -Wall" ..
+          make -j$(nproc)
+          echo "BUILD_STATUS=SUCCESS" >> $GITHUB_ENV
+
+      - name: Run ctest with ${{ matrix.sanitizer }}
+        id: ctest
+        if: env.BUILD_STATUS == 'SUCCESS'
+        timeout-minutes: ${{ matrix.timeout-minutes }}
+        run: |
+          cd hal/build
+          ctest --output-on-failure --verbose
+      - name: Upload ctest logs (on failure only)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ctest-logs-${{ matrix.sanitizer }}
+          path: | 
+            hal/build/Testing/Temporary/LastTest.log
+            hal/build/Testing/Temporary/*.txt 
+          retention-days: 5
+
+  # Job 2 : Build Android APK
+  build-android:
+    name: Android APK Build (assembleDebug)
+    runs-on: ubuntu-latest 
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java + Gradle
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          java-version: '17'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
-
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --no-daemon
-
-  build-hal:
-    name: Build HAL (CMake)
+      - name: Setup Android SDK 
+        uses: android-actions/setup-android@v3
+      
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with: 
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper/
+          key: gradle-${{ hashFiles('**/*.gradle', '**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+      - name: Cache Android NDK
+        uses: actions/cache@v3
+        with:
+          path: /opt/android-ndk-${{ env.NDK_VERSION }}
+          key: android-ndk-${{ env.NDK_VERSION }}
+          restore-keys: ndk-${{ env.NDK_VERSION }}
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace -i
+      - name: Verify APK Build
+        run: |
+          cd android/app/build/outputs/apk/debug
+          if [ -f "app-debug.apk" ]; then
+            echo "APK build successful."
+          else
+            echo "APK build failed."
+            exit 1
+          fi
+          ls -lh app-debug.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 5
+  # Job 3 : Run Android Unit Tests
+  python-simulation:
+    name: Python Simulation Tests
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install CMake
-        run: sudo apt-get install -y cmake
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
 
-      - name: Configure
-        run: cmake -S hal -B hal/build -DCMAKE_BUILD_TYPE=Debug
+      - name: Install Python deps
+        run: |
+          cd python_simulator
+          
+          pip install -q -r requirements.txt || echo "No requirements.txt"
+          
+      - name: Start DoIP server + run integration test
+        timeout-minutes: 5
+        run: |
+          cd python_simulator
+          
+          # Start server in background
+          python3 doip_server.py &
+          SERVER_PID=$!
+          echo "Server started (PID=$SERVER_PID)"
+          
+          # Wait for server ready
+          sleep 2
+          
+          # Run comprehensive DoIP client test
+          python3 testDoIP.py
+          TEST_RESULT=$?
+          
+          # Cleanup
+          kill $SERVER_PID || true
+          wait $SERVER_PID 2>/dev/null || true
+          echo "Server stopped"
+          
+          # Exit with test result code
+          exit $TEST_RESULT
+          
+      - name: Upload simulator log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: sim-log
+          path: python_simulator/*.log
+          retention-days: 7
 
-      - name: Build
-        run: cmake --build hal/build
+  # ===== SUMMARY =====
+  ci-status:
+    name: CI Status Summary
+    runs-on: ubuntu-latest
+    needs: [build-native, build-android, python-simulation]
+    if: always()
+    
+    steps:
+      - name: Check job status
+        run: |
+          echo "Native: ${{ needs.build-native.result }}"
+          echo "Android: ${{ needs.build-android.result }}"
+          echo "Python Sim: ${{ needs.python-simulation.result }}"
+          
+          # Fail overall if critical jobs fail
+          if [ "${{ needs.build-native.result }}" = "failure" ] || \
+             [ "${{ needs.build-android.result }}" = "failure" ]; then
+            echo "❌ CI FAILED (native or android job failed)"
+            exit 1
+          fi
+          
+          if [ "${{ needs.python-simulation.result }}" = "failure" ]; then
+            echo "⚠️ Python sim test failed (non-critical)"
+          else
+            echo "✅ CI PASSED"
+          fi

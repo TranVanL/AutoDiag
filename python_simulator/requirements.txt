@@ -1,0 +1,13 @@
+# DoIP Simulator Requirements
+# Python 3.10+
+
+# Built-in modules only:
+# - socket
+# - struct
+# - threading
+# - dataclasses
+# - typing
+# - logging
+
+# Optional: pytest for advanced testing
+pytest>=7.0
