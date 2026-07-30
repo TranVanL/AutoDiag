@@ -270,7 +270,7 @@ std::uint32_t DoipDiagnosticHal::readU32(const std::uint8_t* p) {
 }
 
 IDiagnosticHal::Result DoipDiagnosticHal::readProperty(uint32_t propId) {
-    // Encode as ReadDataByIdentifier (0x22) request and delegate to SendAndReceive
+    
     const uint16_t did = static_cast<uint16_t>(propId);
     const std::vector<uint8_t> req = {
         static_cast<uint8_t>(UdsService::ReadDataByIdentifier),

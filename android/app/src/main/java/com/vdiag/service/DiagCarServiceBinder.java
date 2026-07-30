@@ -15,20 +15,28 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     private static final String TAG = "CarService.Binder";
     private final DiagCarService mService;
     private final ClientRegistry mClientRegistry;
+    private final SubscriptionManager mSubManager;
 
-    public DiagCarServiceBinder(DiagCarService service, ClientRegistry clientRegistry) {
+    public DiagCarServiceBinder(DiagCarService service, ClientRegistry clientRegistry,
+                                SubscriptionManager subManager) {
         mService = service;
         mClientRegistry = clientRegistry;
+        mSubManager = subManager;
     }
 
     @Override
-    public void subscribeProperty(int proId , float rateHz ,IDiagPropertyListener listener) {
-        Log.i(TAG, "subscribeProperty() proId=0x" + Integer.toHexString(proId));
+    public void subscribeProperty(int proId, float rateHz, IDiagPropertyListener listener) {
+        PermissionGate.enforce(mService);
+        Log.i(TAG, "subscribeProperty() proId=0x" + Integer.toHexString(proId)
+                + " rateHz=" + rateHz);
+        mSubManager.register(proId, rateHz, listener);
     }
 
     @Override
-    public void unsubscribeProperty(int proId , IDiagPropertyListener listener) {
+    public void unsubscribeProperty(int proId, IDiagPropertyListener listener) {
+        PermissionGate.enforce(mService);
         Log.i(TAG, "unsubscribeProperty() proId=0x" + Integer.toHexString(proId));
+        mSubManager.unregister(proId, listener);
     }
     
     @Override
@@ -79,6 +87,7 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
 
     public void cleanup() {
         Log.i(TAG, "🧹 DiagServiceBinder.cleanup()");
+        mSubManager.shutdown();
         mClientRegistry.cleanup();
     }
 }

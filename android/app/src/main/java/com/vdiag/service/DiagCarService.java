@@ -10,6 +10,7 @@ public class DiagCarService extends Service {
     private static final String TAG = "DiagCarService";
     private DiagCarServiceBinder mBinder;
     private ClientRegistry mClientRegistry;
+    private SubscriptionManager mSubManager;
 
     @Override
     public  void onCreate() {
@@ -23,7 +24,10 @@ public class DiagCarService extends Service {
         }
 
         mClientRegistry = new ClientRegistry();
-        mBinder = new DiagCarServiceBinder(this, mClientRegistry);
+
+        mSubManager = new SubscriptionManager(DiagHalBridge::readProperty);
+
+        mBinder = new DiagCarServiceBinder(this, mClientRegistry, mSubManager);
         Log.i(TAG, "DiagCarService Binder created");
     }
 
@@ -43,13 +47,14 @@ public class DiagCarService extends Service {
     public void onDestroy() {
         Log.i(TAG, "DiagCarService onDestroy");
         if (mBinder != null) {
-            mBinder.cleanup();
+            mBinder.cleanup();   
             mBinder = null;
         }
         if (!DiagHalBridge.shutdown()) {
             Log.w(TAG, "JNI shutdown failed or was skipped");
         }
         mClientRegistry = null;
+        mSubManager = null;
         super.onDestroy();
     }
 }

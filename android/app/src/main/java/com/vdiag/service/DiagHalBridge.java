@@ -30,6 +30,9 @@ public class DiagHalBridge {
 
     public static native void nativeShutdown();
 
+
+    public static native String nativeReadProperty(int propId);
+
     public static boolean init(String halType) {
         if (!sNativeReady) {
             Log.e(TAG, "nativeInit skipped: JNI library not loaded");
@@ -60,5 +63,15 @@ public class DiagHalBridge {
 
     public static boolean isNativeReady() {
         return sNativeReady;
+    }
+
+    public static String readProperty(int propId) {
+        if (!sNativeReady) return null;
+        try {
+            return nativeReadProperty(propId);
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeReadProperty not linked", e);
+            return null;
+        }
     }
 }

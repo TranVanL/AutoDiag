@@ -128,3 +128,49 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
                         "Engine rejected request");
     }
 }
+
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_vdiag_service_DiagHalBridge_nativeReadProperty(JNIEnv* env, jclass, jint propId) {
+    if (g_engine == nullptr) {
+        __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
+                            "nativeReadProperty: engine not init — propId=0x%X", propId);
+        return nullptr;
+    }
+
+    autodiag::IDiagnosticHal* hal = g_engine->getHal();
+    if (hal == nullptr) return nullptr;
+
+    autodiag::IDiagnosticHal::Result result =
+            hal->readProperty(static_cast<uint32_t>(propId));
+
+    if (!result.success || result.data.empty()) {
+        __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
+                            "nativeReadProperty: HAL error propId=0x%X — %s",
+                            propId, result.error.c_str());
+        return nullptr;
+    }
+
+   
+    bool isText = true;
+    for (uint8_t b : result.data) {
+        if (b < 32 || b > 126) { isText = false; break; }
+    }
+
+    std::string out;
+    if (isText) {
+        out = std::string(result.data.begin(), result.data.end());
+    } else {
+        // Big-endian int (1-4 bytes)
+        int64_t val = 0;
+        for (uint8_t b : result.data) {
+            val = (val << 8) | b;
+        }
+        out = std::to_string(val);
+    }
+
+    __android_log_print(ANDROID_LOG_DEBUG, JNI_TAG,
+                        "nativeReadProperty: propId=0x%X → \"%s\"", propId, out.c_str());
+    return env->NewStringUTF(out.c_str());
+}
