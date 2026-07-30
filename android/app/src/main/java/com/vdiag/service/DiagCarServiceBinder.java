@@ -8,6 +8,9 @@ import com.vdiag.IDiagCallback;
 import com.vdiag.IDiagCarService;
 import com.vdiag.DiagRequest;
 
+import com.vdiag.DiagPropertyEvent;
+import com.vdiag.IDiagPropertyListener;
+
 public class DiagCarServiceBinder extends IDiagCarService.Stub {
     private static final String TAG = "CarService.Binder";
     private final DiagCarService mService;
@@ -18,6 +21,16 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
         mClientRegistry = clientRegistry;
     }
 
+    @Override
+    public void subscribeProperty(int proId , float rateHz ,IDiagPropertyListener listener) {
+        Log.i(TAG, "subscribeProperty() proId=0x" + Integer.toHexString(proId));
+    }
+
+    @Override
+    public void unsubscribeProperty(int proId , IDiagPropertyListener listener) {
+        Log.i(TAG, "unsubscribeProperty() proId=0x" + Integer.toHexString(proId));
+    }
+    
     @Override
     public void registerCallback(IDiagCallback callback) {
         PermissionGate.enforce(mService);
