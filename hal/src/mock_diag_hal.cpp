@@ -2,6 +2,7 @@
 
 #include "diag_type.h"
 
+#include <random>
 #include <string>
 
 namespace autodiag {
@@ -109,9 +110,38 @@ bool MockDiagnosticHal::isReady() const {
     return is_ready;
 }
 
+IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId) {
+    if (!is_ready) {
+        return {false, {}, "Mock HAL is not ready!"};
+    }
 
+    static std::mt19937 rng{std::random_device{}()};
 
+    const auto id = static_cast<DiagProperty>(static_cast<uint16_t>(propId));
+
+    if (id == DiagProperty::SOC) {
+        // drift value 77-82
+        std::uniform_int_distribution<int> dist(77, 82);
+        const uint8_t soc = static_cast<uint8_t>(dist(rng));
+        return {true, {soc}, {}};
+    }
+
+    if (id == DiagProperty::RPM) {
+        // random 2900-3500
+        std::uniform_int_distribution<int> dist(2900, 3500);
+        const int rpm = dist(rng);
+        return {true,
+                {static_cast<uint8_t>((rpm >> 8) & 0xFF),
+                 static_cast<uint8_t>(rpm & 0xFF)},
+                {}};
+    }
+
+    if (id == DiagProperty::VIN) {
+        const std::string vin = "VINFAST12345678901";
+        return {true, {vin.begin(), vin.end()}, {}};
+    }
+
+    return {false, {}, "Unknown propId"};
+}
 
 } // namespace autodiag 
-
-

@@ -12,9 +12,10 @@ class DoipDiagnosticHal : public IDiagnosticHal {
 public: 
     DoipDiagnosticHal(std::string host, uint16_t port);
     ~DoipDiagnosticHal() override;
-    IDiagnosticHal::Result SendAndReceive(const std::vector<uint8_t> &req) override ;
+    IDiagnosticHal::Result SendAndReceive(const std::vector<uint8_t> &req) override;
+    IDiagnosticHal::Result readProperty(uint32_t propId) override;
     bool isReady() const override;
-    void reset() override; 
+    void reset() override;
 
 private:
     bool connect();

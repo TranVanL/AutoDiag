@@ -97,6 +97,42 @@ void testTesterPresentPositive() {
     expectTrue(hal.isReady(), "mock_is_ready_true");
 }
 
+void testReadPropertySocInRange() {
+    autodiag::MockDiagnosticHal hal;
+    // Run a few times to catch out-of-range drift values
+    for (int i = 0; i < 20; ++i) {
+        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::SOC));
+        expectTrue(result.success, "read_property_soc_success");
+        expectTrue(result.data.size() == 1, "read_property_soc_size_1");
+        if (!result.data.empty()) {
+            const uint8_t soc = result.data[0];
+            expectTrue(soc >= 77 && soc <= 82, "read_property_soc_in_range_77_82");
+        }
+    }
+}
+
+void testReadPropertyRpmInRange() {
+    autodiag::MockDiagnosticHal hal;
+    for (int i = 0; i < 20; ++i) {
+        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::RPM));
+        expectTrue(result.success, "read_property_rpm_success");
+        expectTrue(result.data.size() == 2, "read_property_rpm_size_2");
+        if (result.data.size() == 2) {
+            const int rpm = (static_cast<int>(result.data[0]) << 8) | result.data[1];
+            expectTrue(rpm >= 2900 && rpm <= 3500, "read_property_rpm_in_range_2900_3500");
+        }
+    }
+}
+
+void testReadPropertyVinConstant() {
+    autodiag::MockDiagnosticHal hal;
+    const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::VIN));
+    expectTrue(result.success, "read_property_vin_success");
+    const std::string expected = "VINFAST12345678901";
+    const std::string actual(result.data.begin(), result.data.end());
+    expectTrue(actual == expected, "read_property_vin_value");
+}
+
 }  // namespace
 
 int main() {
@@ -105,6 +141,9 @@ int main() {
     testReadDtcDefaultList();
     testClearDtcThenReadDtcEmpty();
     testTesterPresentPositive();
+    testReadPropertySocInRange();
+    testReadPropertyRpmInRange();
+    testReadPropertyVinConstant();
 
     if (g_failures == 0) {
         std::cout << "All mock HAL tests passed. tests=" << g_tests << "\n";

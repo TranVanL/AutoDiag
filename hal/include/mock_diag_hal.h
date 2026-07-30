@@ -11,7 +11,8 @@ namespace autodiag {
 class MockDiagnosticHal : public IDiagnosticHal {
 public: 
     MockDiagnosticHal();
-    IDiagnosticHal::Result SendAndReceive(const std::vector<uint8_t> &req) override ;
+    IDiagnosticHal::Result SendAndReceive(const std::vector<uint8_t> &req) override;
+    IDiagnosticHal::Result readProperty(uint32_t propId) override;
     bool isReady() const override;
     void reset() override;
 private: 
