@@ -13,9 +13,14 @@ import android.util.Log;
 import com.vdiag.DiagRequest;
 import com.vdiag.IDiagCallback;
 import com.vdiag.IDiagCarService;
+import com.vdiag.DiagPropertyEvent;
+import com.vdiag.IDiagPropertyListener;
 
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,14 +42,51 @@ public final class DiagClient implements AutoCloseable {
     private final AtomicInteger nextRequestId;
     private final AtomicBoolean closed;
     private final Map<Integer, DiagProperty> inFlight;
+    private final Set<SubscriptionToken> activeSubscriptions;
 
     private volatile IDiagCarService diagService;
     private volatile boolean bound;
     private volatile DiagListener listener;
     private volatile ConnectionListener connectionListener;
 
+    private final Executor mainExecutor;
+
     public interface ConnectionListener {
         void onConnectionChanged(boolean connected, String message);
+    }
+
+    public interface PropertySubscriptionCallback {
+        void onPropertyChanged(DiagProperty property, DiagPropertyEvent event);
+
+        void onPropertyError(DiagProperty property, int areaId, int errorCode);
+    }
+
+    public final class SubscriptionToken implements AutoCloseable {
+        private final DiagProperty property;
+        private final IDiagPropertyListener remoteListener;
+        private final AtomicBoolean active = new AtomicBoolean(true);
+
+        private SubscriptionToken(DiagProperty property, IDiagPropertyListener remoteListener) {
+            this.property = property;
+            this.remoteListener = remoteListener;
+        }
+
+        public boolean isActive() {
+            return active.get();
+        }
+
+        public void unsubscribe() {
+            if (!active.compareAndSet(true, false)) {
+                return;
+            }
+            unsubscribeInternal(property, remoteListener);
+            activeSubscriptions.remove(this);
+        }
+
+        @Override
+        public void close() {
+            unsubscribe();
+        }
     }
 
     private final IDiagCallback sdkCallback = new IDiagCallback.Stub() {
@@ -114,6 +156,8 @@ public final class DiagClient implements AutoCloseable {
         this.nextRequestId = new AtomicInteger(1);
         this.closed = new AtomicBoolean(false);
         this.inFlight = new ConcurrentHashMap<>();
+        this.activeSubscriptions = ConcurrentHashMap.newKeySet();
+        this.mainExecutor = command -> mainHandler.post(command);
     }
 
     /**
@@ -179,6 +223,61 @@ public final class DiagClient implements AutoCloseable {
         return requestId;
     }
 
+    /**
+     * Subscribes to a property stream and returns a token for lifecycle-safe unsubscribe.
+     * rateHz = 0 means on-change mode.
+     */
+    public SubscriptionToken subscribeProperty(DiagProperty property,
+                                               float rateHz,
+                                               Executor executor,
+                                               PropertySubscriptionCallback callback) {
+        Objects.requireNonNull(property, "property == null");
+        Objects.requireNonNull(callback, "callback == null");
+
+        final IDiagCarService service = diagService;
+        if (closed.get() || service == null) {
+            throw new IllegalStateException("service is not connected");
+        }
+
+        final Executor callbackExecutor = (executor != null) ? executor : mainExecutor;
+
+        final IDiagPropertyListener remoteListener = new IDiagPropertyListener.Stub() {
+            @Override
+            public void onPropertyChanged(DiagPropertyEvent event) {
+                callbackExecutor.execute(() -> callback.onPropertyChanged(property, event));
+            }
+
+            @Override
+            public void onPropertyError(int proId, int areaId, int errorCode) {
+                callbackExecutor.execute(() -> callback.onPropertyError(property, areaId, errorCode));
+            }
+        };
+
+        try {
+            service.subscribeProperty(property.getPropId(), rateHz, remoteListener);
+            SubscriptionToken token = new SubscriptionToken(property, remoteListener);
+            activeSubscriptions.add(token);
+            Log.i(TAG, "subscribeProperty ok prop=" + property.name() + " rateHz=" + rateHz);
+            return token;
+        } catch (RemoteException e) {
+            Log.e(TAG, "subscribeProperty failed", e);
+            throw new RuntimeException("subscribeProperty failed", e);
+        }
+    }
+
+    private void unsubscribeInternal(DiagProperty property, IDiagPropertyListener remoteListener) {
+        final IDiagCarService service = diagService;
+        if (service == null || remoteListener == null) {
+            return;
+        }
+        try {
+            service.unsubscribeProperty(property.getPropId(), remoteListener);
+            Log.i(TAG, "unsubscribeProperty ok prop=" + property.name());
+        } catch (RemoteException e) {
+            Log.w(TAG, "unsubscribeProperty failed prop=" + property.name(), e);
+        }
+    }
+
     private void bind() {
         if (closed.get() || bound) {
             return;
@@ -199,6 +298,11 @@ public final class DiagClient implements AutoCloseable {
         if (!closed.compareAndSet(false, true)) {
             return;
         }
+
+        for (SubscriptionToken token : activeSubscriptions.toArray(new SubscriptionToken[0])) {
+            token.unsubscribe();
+        }
+        activeSubscriptions.clear();
 
         IDiagCarService service = diagService;
         if (service != null) {

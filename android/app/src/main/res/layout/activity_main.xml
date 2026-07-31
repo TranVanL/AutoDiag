@@ -87,7 +87,7 @@
         android:useDefaultMargins="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/status_card">
+        app:layout_constraintTop_toBottomOf="@id/live_card">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_get_vin"
@@ -167,6 +167,60 @@
             app:backgroundTint="@color/diag_accent"
             app:cornerRadius="18dp" />
     </GridLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/live_card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="@color/diag_surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/status_card"
+        app:strokeColor="@color/diag_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SOC Live"
+                android:textColor="@color/diag_text_secondary" />
+
+            <TextView
+                android:id="@+id/live_soc_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- %"
+                android:textColor="@color/diag_accent"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="RPM Live"
+                android:textColor="@color/diag_text_secondary" />
+
+            <TextView
+                android:id="@+id/live_rpm_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- rpm"
+                android:textColor="@color/diag_text_primary"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:id="@+id/results_label"

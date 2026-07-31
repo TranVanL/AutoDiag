@@ -14,6 +14,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.vdiag.DiagPropertyEvent;
 import com.vdiag.sdk.DiagClient;
 import com.vdiag.sdk.DiagListener;
 import com.vdiag.sdk.DiagProperty;
@@ -23,6 +24,7 @@ import com.vdiag.ui.ResultItem;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity implements DiagListener {
     private static final String TAG = "MainActivity";
@@ -33,6 +35,10 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
     private DiagClient mDiagClient;
 
     private TextView mStatusText;
+
+    private TextView mSocLiveValue;
+
+    private TextView mRpmLiveValue;
 
     private View mStatusDot;
 
@@ -50,6 +56,12 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
 
     private ResultAdapter mResultAdapter;
 
+    private DiagClient.SubscriptionToken mSocToken;
+
+    private DiagClient.SubscriptionToken mRpmToken;
+
+    private final Executor mUiExecutor = command -> runOnUiThread(command);
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +75,8 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         });
 
         mStatusText = findViewById(R.id.status_text);
+        mSocLiveValue = findViewById(R.id.live_soc_value);
+        mRpmLiveValue = findViewById(R.id.live_rpm_value);
         mStatusDot = findViewById(R.id.status_dot);
         mGetVinButton = findViewById(R.id.btn_get_vin);
         mGetSwVersionButton = findViewById(R.id.btn_get_sw_version);
@@ -92,7 +106,9 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
             if (connected) {
                 setStatusConnected(message);
                 setButtonsEnabled(true);
+                startLiveSubscriptions();
             } else {
+                stopLiveSubscriptions();
                 setStatusConnecting(message);
                 setButtonsEnabled(false);
             }
@@ -121,17 +137,20 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         if (mDiagClient != null && mDiagClient.isConnected()) {
             setStatusConnected(getString(R.string.diag_status_connected));
             setButtonsEnabled(true);
+            startLiveSubscriptions();
         }
     }
 
     @Override
     protected void onStop() {
+        stopLiveSubscriptions();
         super.onStop();
         Log.i(TAG, "onStop");
     }
 
     @Override
     protected void onDestroy() {
+        stopLiveSubscriptions();
         if (mDiagClient != null) {
             mDiagClient.close();
             mDiagClient = null;
@@ -164,6 +183,75 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
                 ? String.format(Locale.US, "Latency %.3f ms", latencyUs / 1000.0)
                 : "Latency unavailable";
         mResultAdapter.prepend(new ResultItem(timestamp, property, value, latency));
+    }
+
+    private void startLiveSubscriptions() {
+        if (mDiagClient == null || !mDiagClient.isConnected()) {
+            return;
+        }
+
+        if (mSocToken == null || !mSocToken.isActive()) {
+            try {
+                mSocToken = mDiagClient.subscribeProperty(
+                        DiagProperty.SOC,
+                        1.0f,
+                        mUiExecutor,
+                        new DiagClient.PropertySubscriptionCallback() {
+                            @Override
+                            public void onPropertyChanged(DiagProperty property, DiagPropertyEvent event) {
+                                String val = event != null && event.valueString != null
+                                        ? event.valueString
+                                        : String.valueOf(event != null ? event.valueInt : 0);
+                                mSocLiveValue.setText(val + " %");
+                            }
+
+                            @Override
+                            public void onPropertyError(DiagProperty property, int areaId, int errorCode) {
+                                mSocLiveValue.setText("-- %");
+                            }
+                        }
+                );
+            } catch (IllegalStateException | RuntimeException e) {
+                Log.e(TAG, "SOC subscribe failed", e);
+            }
+        }
+
+        if (mRpmToken == null || !mRpmToken.isActive()) {
+            try {
+                mRpmToken = mDiagClient.subscribeProperty(
+                        DiagProperty.RPM,
+                        0f,
+                        mUiExecutor,
+                        new DiagClient.PropertySubscriptionCallback() {
+                            @Override
+                            public void onPropertyChanged(DiagProperty property, DiagPropertyEvent event) {
+                                String val = event != null && event.valueString != null
+                                        ? event.valueString
+                                        : String.valueOf(event != null ? event.valueInt : 0);
+                                mRpmLiveValue.setText(val + " rpm");
+                            }
+
+                            @Override
+                            public void onPropertyError(DiagProperty property, int areaId, int errorCode) {
+                                mRpmLiveValue.setText("-- rpm");
+                            }
+                        }
+                );
+            } catch (IllegalStateException | RuntimeException e) {
+                Log.e(TAG, "RPM subscribe failed", e);
+            }
+        }
+    }
+
+    private void stopLiveSubscriptions() {
+        if (mSocToken != null) {
+            mSocToken.unsubscribe();
+            mSocToken = null;
+        }
+        if (mRpmToken != null) {
+            mRpmToken.unsubscribe();
+            mRpmToken = null;
+        }
     }
 
     private void setButtonsEnabled(boolean enabled) {
