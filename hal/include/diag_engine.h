@@ -30,6 +30,8 @@ public:
     bool submit(const DiagRequest& req, Callback cb);
     void shutdown();
     std::size_t pendingCount() const;
+    bool isWorkerAlive() const;
+    int getQueueDepth() const;
     
     IDiagnosticHal* getHal() const { return hal_.get(); }
 
@@ -54,6 +56,8 @@ private:
     std::thread worker_{};
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_{false};
+    std::atomic<bool> workerAlive_{false};
+    std::atomic<int> queueDepth_{0};
 };
 
 }  // namespace autodiag

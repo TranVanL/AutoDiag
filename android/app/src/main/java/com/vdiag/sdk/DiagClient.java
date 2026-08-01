@@ -223,10 +223,7 @@ public final class DiagClient implements AutoCloseable {
         return requestId;
     }
 
-    /**
-     * Subscribes to a property stream and returns a token for lifecycle-safe unsubscribe.
-     * rateHz = 0 means on-change mode.
-     */
+    
     public SubscriptionToken subscribeProperty(DiagProperty property,
                                                float rateHz,
                                                Executor executor,

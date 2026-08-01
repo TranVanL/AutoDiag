@@ -47,14 +47,22 @@ bool DiagEngine::submit(const DiagRequest& req, Callback cb) {
             return false;
         }
         queue_.push(std::move(item));
+        queueDepth_.fetch_add(1);
     }
     cv_.notify_one();
     return true;
 }
 
 std::size_t DiagEngine::pendingCount() const {
-    std::lock_guard<std::mutex> lk(mu_);
-    return queue_.size();
+    return static_cast<std::size_t>(queueDepth_.load());
+}
+
+bool DiagEngine::isWorkerAlive() const {
+    return workerAlive_.load();
+}
+
+int DiagEngine::getQueueDepth() const {
+    return queueDepth_.load();
 }
 
 void DiagEngine::shutdown() {
@@ -74,10 +82,12 @@ void DiagEngine::shutdown() {
             queue_.pop();
         }
     }
+    queueDepth_.store(0);
     running_.store(false);
 }
 
 void DiagEngine::workerLoop() {
+    workerAlive_.store(true);
     while (true) {
         WorkItem item{};
 
@@ -91,6 +101,7 @@ void DiagEngine::workerLoop() {
 
             item = std::move(queue_.front());
             queue_.pop();
+            queueDepth_.fetch_sub(1);
         }
 
         const auto t0 = std::chrono::steady_clock::now();
@@ -134,6 +145,7 @@ void DiagEngine::workerLoop() {
 
         item.session.reset();
     }
+    workerAlive_.store(false);
 }
 
 }  // namespace autodiag
