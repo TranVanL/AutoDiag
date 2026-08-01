@@ -33,6 +33,34 @@ public class DiagHalBridge {
 
     public static native String nativeReadProperty(int propId);
 
+  
+    private static native boolean nativeIsWorkerAlive();
+
+ 
+    private static native int nativeGetQueueDepth();
+
+   
+    public static boolean isWorkerAlive() {
+        if (!sNativeReady) return false;
+        try {
+            return nativeIsWorkerAlive();
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeIsWorkerAlive not linked", e);
+            return false;
+        }
+    }
+
+   
+    public static int getQueueDepth() {
+        if (!sNativeReady) return 0;
+        try {
+            return nativeGetQueueDepth();
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeGetQueueDepth not linked", e);
+            return 0;
+        }
+    }
+
     public static boolean init(String halType) {
         if (!sNativeReady) {
             Log.e(TAG, "nativeInit skipped: JNI library not loaded");

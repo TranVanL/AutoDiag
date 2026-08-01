@@ -2,38 +2,44 @@ package com.vdiag.service;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.util.Log;
 
-
 public class DiagCarService extends Service {
+
     private static final String TAG = "DiagCarService";
+
     private DiagCarServiceBinder mBinder;
-    private ClientRegistry mClientRegistry;
-    private SubscriptionManager mSubManager;
+    private ClientRegistry       mClientRegistry;
+    private SubscriptionManager  mSubManager;
+
+   
+    private ISystemLifecycle mSystemClient;
 
     @Override
-    public  void onCreate() {
+    public void onCreate() {
         super.onCreate();
         Log.i(TAG, "DiagCarService onCreate");
 
-        // Initialize JNI bridge once service starts.
-        // Use 127.0.0.1 with adb reverse tcp:13400 tcp:13400 to connect to host simulator
-        if (!DiagHalBridge.init("doip:127.0.0.1:13400")) {
-            Log.e(TAG, "JNI init failed, service runs in degraded mode");
+        
+        if (!DiagHalBridge.init("mock")) {
+            Log.e(TAG, "JNI init failed — service runs in degraded mode");
         }
 
+        // 2. Binder-layer infrastructure.
         mClientRegistry = new ClientRegistry();
-
-        mSubManager = new SubscriptionManager(DiagHalBridge::readProperty);
-
-        mBinder = new DiagCarServiceBinder(this, mClientRegistry, mSubManager);
+        mSubManager     = new SubscriptionManager(DiagHalBridge::readProperty);
+        mBinder         = new DiagCarServiceBinder(this, mClientRegistry, mSubManager);
         Log.i(TAG, "DiagCarService Binder created");
+
+        mSystemClient = createSystemClient();
+        mSystemClient.start();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.i(TAG, "📍 onBind — client connecting");
+        Log.i(TAG, "onBind — client connecting");
         return mBinder;
     }
 
@@ -46,15 +52,36 @@ public class DiagCarService extends Service {
     @Override
     public void onDestroy() {
         Log.i(TAG, "DiagCarService onDestroy");
+
+     
+        if (mSystemClient != null) {
+            mSystemClient.stop();
+            mSystemClient = null;
+        }
+
+       
         if (mBinder != null) {
-            mBinder.cleanup();   
+            mBinder.cleanup();
             mBinder = null;
         }
+
+       
         if (!DiagHalBridge.shutdown()) {
             Log.w(TAG, "JNI shutdown failed or was skipped");
         }
+
         mClientRegistry = null;
-        mSubManager = null;
+        mSubManager     = null;
         super.onDestroy();
+    }
+
+    ISystemLifecycle createSystemClient() {
+        final PackageManager pm = getPackageManager();
+        if (pm != null && pm.hasSystemFeature("android.hardware.type.automotive")) {
+            Log.i(TAG, "Automotive feature detected → using CarApiSystemClient");
+            return new CarApiSystemClient(this);
+        }
+        Log.i(TAG, "Regular emulator detected → using ShimSystemClient");
+        return new ShimSystemClient();
     }
 }

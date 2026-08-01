@@ -130,6 +130,28 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
 }
 
 
+// ── health surface (Day 56 atomics exposed to Java via JNI) ───────────────────
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_vdiag_service_DiagHalBridge_nativeIsWorkerAlive(
+        JNIEnv*, jclass) {
+    if (g_engine == nullptr) {
+        return JNI_FALSE;
+    }
+    return g_engine->isWorkerAlive() ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_vdiag_service_DiagHalBridge_nativeGetQueueDepth(
+        JNIEnv*, jclass) {
+    if (g_engine == nullptr) {
+        return 0;
+    }
+    return static_cast<jint>(g_engine->getQueueDepth());
+}
+
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_vdiag_service_DiagHalBridge_nativeReadProperty(JNIEnv* env, jclass, jint propId) {
