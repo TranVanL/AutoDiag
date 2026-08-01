@@ -76,12 +76,6 @@ public class DiagCarService extends Service {
     }
 
     ISystemLifecycle createSystemClient() {
-        final PackageManager pm = getPackageManager();
-        if (pm != null && pm.hasSystemFeature("android.hardware.type.automotive")) {
-            Log.i(TAG, "Automotive feature detected → using CarApiSystemClient");
-            return new CarApiSystemClient(this);
-        }
-        Log.i(TAG, "Regular emulator detected → using ShimSystemClient");
         return new ShimSystemClient();
     }
 }

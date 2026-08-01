@@ -211,7 +211,7 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
                             }
                         }
                 );
-            } catch (IllegalStateException | RuntimeException e) {
+            } catch (RuntimeException e) {
                 Log.e(TAG, "SOC subscribe failed", e);
             }
         }
@@ -237,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
                             }
                         }
                 );
-            } catch (IllegalStateException | RuntimeException e) {
+            } catch (RuntimeException e) {
                 Log.e(TAG, "RPM subscribe failed", e);
             }
         }
