@@ -8,15 +8,18 @@ extern jmethodID g_onErrorId;
 
 namespace {
     constexpr const char* TAG = "VDiag.JNI";
+    // use pthread to detach thread after completion of native thread call
     pthread_key_t g_detachKey;
     pthread_once_t g_detachKeyOnce = PTHREAD_ONCE_INIT;
 
+    // Function call when thread detach
     void DetachThunk(void* arg) {
         if (g_jvm != nullptr) {
             g_jvm->DetachCurrentThread();
         }
     }
 
+    // CreateKey
     void CreateDetachKey() {
         const int rc = pthread_key_create(&g_detachKey, DetachThunk);
         if (rc != 0 ) {
@@ -32,6 +35,7 @@ JniCallbackBridge::JniCallbackBridge(JNIEnv* env, jobject callback) {
         return;
     }
 
+    // Register callback to global ref
     m_callback = env->NewGlobalRef(callback);
     if (m_callback == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: NewGlobalRef failed");
@@ -52,6 +56,7 @@ JniCallbackBridge::~JniCallbackBridge() noexcept {
     if (m_callback != nullptr) {
         JNIEnv* env = getEnv();
         if (env != nullptr) {
+            // Delete global ref
             env->DeleteGlobalRef(m_callback);
             __android_log_print(ANDROID_LOG_INFO, TAG, "JniCallbackBridge: GlobalRef deleted and bridge destroyed");
         } else {
@@ -64,6 +69,7 @@ JniCallbackBridge::~JniCallbackBridge() noexcept {
 }
 
 
+// Function that client require callback to handle
 void JniCallbackBridge::onError(int requestId, int errorCode, const std::string& errorMsg) {
     if (m_callback == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: callback is null");
@@ -96,7 +102,7 @@ void JniCallbackBridge::onError(int requestId, int errorCode, const std::string&
     }
     env->DeleteLocalRef(jmsg);
 }
-
+// Function that client require callback to handle
 void JniCallbackBridge::onResult(int requestId, const std::string &value, int64_t latencyUs) {
     if (m_callback == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: callback is null");
@@ -121,6 +127,7 @@ void JniCallbackBridge::onResult(int requestId, const std::string &value, int64_
         return;
     }
 
+    // Use JNI* env to call from native to Java with object callback , method , and arguments
     env->CallVoidMethod(m_callback, g_onResultId, static_cast<jint>(requestId), jval, static_cast<jlong>(latencyUs));
     if (env->ExceptionCheck()) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "onResult: exception from callback");
@@ -130,6 +137,7 @@ void JniCallbackBridge::onResult(int requestId, const std::string &value, int64_
     env->DeleteLocalRef(jval);
 }
 
+// Get JNIEnv from JVM
 JNIEnv* JniCallbackBridge::getEnv() {
     if (g_jvm == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: g_jvm is null");
@@ -139,6 +147,7 @@ JNIEnv* JniCallbackBridge::getEnv() {
     JNIEnv *env = nullptr;
     const jint status = g_jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
     if (status == JNI_OK) return env;
+    // Attach thread to get JNIEnv , only thread create by JVM have Java Thread structure to manage , worker thread by
     if (status == JNI_EDETACHED) {
         const jint attachStatus = g_jvm->AttachCurrentThread(&env, nullptr);
         if (attachStatus != JNI_OK || env == nullptr) {

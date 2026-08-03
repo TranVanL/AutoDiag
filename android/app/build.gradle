@@ -18,7 +18,6 @@ android {
                 cppFlags "-std=c++17 -fexceptions -frtti"
             }
         }
-
         ndk {
             abiFilters 'arm64-v8a', 'x86_64'
         }

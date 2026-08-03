@@ -6,6 +6,7 @@ import com.vdiag.IDiagCallback;
 import com.vdiag.IDiagPropertyListener;
 import com.vdiag.DiagPropertyEvent;
 
+// Expose contract that service offer to client
 interface IDiagCarService {
     void registerCallback(in IDiagCallback callback);
     void unregisterCallback(in IDiagCallback callback);

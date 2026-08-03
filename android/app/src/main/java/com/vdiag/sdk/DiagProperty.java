@@ -10,6 +10,9 @@ import java.util.Map;
  * propId: stable SDK ID used by app/service contract.
  * udsId: UDS DID or service opcode used for protocol mapping/logging.
  */
+
+// Create diagnostic enum for property , client only need to know information like proID and udsID corresponding
+// Client call only need to push DiagProperty like parameter in function call
 public enum DiagProperty {
     VIN(0xF190, 0x22F190, "VIN"),
     SOC(0x0105, 0x220105, "SOC"),

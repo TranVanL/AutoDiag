@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 
+// Bridge between Java and C++
 class JniCallbackBridge {
 public:
     JniCallbackBridge(JNIEnv* env, jobject callback);

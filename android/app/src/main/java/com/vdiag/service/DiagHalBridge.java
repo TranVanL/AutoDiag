@@ -4,10 +4,11 @@ import android.util.Log;
 
 import com.vdiag.IDiagCallback;
 
+// JNI Bridge for communication with HAL
 public class DiagHalBridge {
     private static final String TAG = "VDiag.HalBridge";
     private static boolean sNativeReady = false;
-
+    // Load native library that has declared in build.gradle
     static {
         try {
             System.loadLibrary("vdiag_jni");
@@ -18,7 +19,9 @@ public class DiagHalBridge {
             Log.e(TAG, "Failed to load native library 'vdiag_jni'", e);
         }
     }
-
+    // Use native function to notify implementation don't have JavaCode to handle JNI call (Don't have body),
+    // Javac will create entry with flag ACC_NATIVE , don't have Java bytes code for that ,
+    // When call ,JVM will jump into library to get address of function to call
     public static native void nativeGetProperty(
             int reqId,
             int propertyId,

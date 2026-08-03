@@ -10,11 +10,12 @@ public class DiagCarService extends Service {
 
     private static final String TAG = "DiagCarService";
 
+    // Member : Binder for communication with clients, Client Registry for client management , Subscription Manager for client registration and property gathering.
     private DiagCarServiceBinder mBinder;
     private ClientRegistry       mClientRegistry;
     private SubscriptionManager  mSubManager;
 
-   
+   // System Lifecycle client with 3 seconds watchdog and lifecycle follow state machine (Follow PowerManagerService pattern)
     private ISystemLifecycle mSystemClient;
 
     @Override
@@ -22,11 +23,12 @@ public class DiagCarService extends Service {
         super.onCreate();
         Log.i(TAG, "DiagCarService onCreate");
 
-        
+        // When create Service , create JNI Hal Bridge and verify HAL works properly
         if (!DiagHalBridge.init("mock")) {
             Log.e(TAG, "JNI init failed — service runs in degraded mode");
         }
 
+        // Init members
         // 2. Binder-layer infrastructure.
         mClientRegistry = new ClientRegistry();
         mSubManager     = new SubscriptionManager(DiagHalBridge::readProperty);
@@ -39,12 +41,15 @@ public class DiagCarService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        // When client bind to service , it calls this method to return Binder
         Log.i(TAG, "onBind — client connecting");
         return mBinder;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
+        // When client unbind from service , it calls this method to clean up
+        // If all of clients unbind , service will be destroyed (Bound Service)
         Log.i(TAG, "onUnbind — client disconnecting");
         return super.onUnbind(intent);
     }
@@ -52,24 +57,20 @@ public class DiagCarService extends Service {
     @Override
     public void onDestroy() {
         Log.i(TAG, "DiagCarService onDestroy");
-
-     
+        // Clear resources
         if (mSystemClient != null) {
             mSystemClient.stop();
             mSystemClient = null;
         }
 
-       
         if (mBinder != null) {
             mBinder.cleanup();
             mBinder = null;
         }
 
-       
         if (!DiagHalBridge.shutdown()) {
             Log.w(TAG, "JNI shutdown failed or was skipped");
         }
-
         mClientRegistry = null;
         mSubManager     = null;
         super.onDestroy();

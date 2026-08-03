@@ -15,6 +15,7 @@ public final class PermissionGate {
         int callerPid = Binder.getCallingPid();
         int callerUid = Binder.getCallingUid();
 
+        // Enforce permission for client
         Log.i(TAG, "🔐 Permission check — pid=" + callerPid + " uid=" + callerUid);
 
         ctx.enforceCallingOrSelfPermission(

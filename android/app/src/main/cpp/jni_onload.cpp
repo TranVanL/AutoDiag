@@ -12,7 +12,9 @@ namespace {
     constexpr const char* CALLBACK_CLASS_NAME = "com/vdiag/IDiagCallback";
 }
 
+// Call when native library load into JVM
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    // Assign global variable to JVM
     g_jvm = vm;
     JNIEnv* env;
     if (vm->GetEnv(reinterpret_cast<void**>(&env) , JNI_VERSION_1_6) != JNI_OK) {
@@ -20,14 +22,20 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         return -1;
     }
 
+    // get local ref of callback class
     jclass localCallbackClass = env->FindClass(CALLBACK_CLASS_NAME);
     if (localCallbackClass == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: FindClass(%s) failed", CALLBACK_CLASS_NAME);
         return -1;
     }
+
+    // Need to change local ref to global ref to ensure it will available when out of JNI frame call
     g_callbackClass = reinterpret_cast<jclass>(env->NewGlobalRef(localCallbackClass));
+    // Delete local ref for don't using and avoid overflow local ref table
     env->DeleteLocalRef(localCallbackClass);
 
+
+    // cache method but jmethod is not a ref so don't need to use global ref to cast it
     g_onResultId = env->GetMethodID(g_callbackClass, "onResult", "(ILjava/lang/String;J)V");
     if (g_onResultId == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: GetMethodID(onResult) failed");
@@ -44,11 +52,13 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_VERSION_1_6;
 }
 
+// function call when native library unload
 void JNI_OnUnload(JavaVM* vm, void* reserved) {
     __android_log_print(ANDROID_LOG_INFO, TAG, "JNI_OnUnload");
     JNIEnv* env = nullptr;
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) == JNI_OK) {
         if (g_callbackClass != nullptr) {
+            // Delete global ref to avoid leak and potential global ref overflow
             env->DeleteGlobalRef(g_callbackClass);
             g_callbackClass = nullptr;
         }

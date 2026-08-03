@@ -27,9 +27,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * SDK facade that hides Binder details and exposes diagnostic property APIs.
  */
+
+// SDK
+// Build a Diag Client directly communicate with service , application or other service only use it , don't need to know about how connection or bind to service , don't care about IPC or Binder
+
 public final class DiagClient implements AutoCloseable {
     private static final String TAG = "DiagClient";
 
+    // Error Code
     public static final int ERR_NOT_CONNECTED = -1001;
     public static final int ERR_BIND_FAILED = -1002;
     public static final int ERR_REMOTE_EXCEPTION = -1003;
@@ -44,6 +49,7 @@ public final class DiagClient implements AutoCloseable {
     private final Map<Integer, DiagProperty> inFlight;
     private final Set<SubscriptionToken> activeSubscriptions;
 
+    // Interface binder object to DiagCarService
     private volatile IDiagCarService diagService;
     private volatile boolean bound;
     private volatile DiagListener listener;
@@ -61,7 +67,10 @@ public final class DiagClient implements AutoCloseable {
         void onPropertyError(DiagProperty property, int areaId, int errorCode);
     }
 
+    // Implement class Token that will return for application to unsubscribe property
+    // Token represent for subscription in service
     public final class SubscriptionToken implements AutoCloseable {
+        // Member : DiagProperty , Listener callback , atomic variable for check subscription is active or not
         private final DiagProperty property;
         private final IDiagPropertyListener remoteListener;
         private final AtomicBoolean active = new AtomicBoolean(true);
@@ -89,6 +98,7 @@ public final class DiagClient implements AutoCloseable {
         }
     }
 
+    // Implement Stub to handle response when client send request
     private final IDiagCallback sdkCallback = new IDiagCallback.Stub() {
         @Override
         public void onResult(int requestId, String value, long latencyUs) {
@@ -108,11 +118,16 @@ public final class DiagClient implements AutoCloseable {
         }
     };
 
+    // Create new connection to connect Service
     private final ServiceConnection connection = new ServiceConnection() {
+        // Function will be called after client bind to service and service call onBInd() and return a binder object
+        // onServiceConnected() will be called when service return binder object
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
+            // Get interface to DiagCarService
             diagService = IDiagCarService.Stub.asInterface(service);
             try {
+                // Register callback to service
                 diagService.registerCallback(sdkCallback);
                 Log.i(TAG, "Connected and callback registered");
                 dispatchConnectionChanged(true, "Connected to DiagCarService");
@@ -125,6 +140,8 @@ public final class DiagClient implements AutoCloseable {
             }
         }
 
+        // onServiceDisconnected() will be called when service connection disconnect (service crash or system kill it) , don't run when client unbind service
+        // Service no longer connect, maybe crash or kill
         @Override
         public void onServiceDisconnected(ComponentName name) {
             Log.w(TAG, "Service disconnected");
@@ -133,6 +150,7 @@ public final class DiagClient implements AutoCloseable {
             dispatchError(null, ERR_NOT_CONNECTED, "Service disconnected", -1);
         }
 
+        // Binder object died , can retry bind
         @Override
         public void onBindingDied(ComponentName name) {
             Log.e(TAG, "Service binding died");
@@ -140,6 +158,8 @@ public final class DiagClient implements AutoCloseable {
             dispatchConnectionChanged(false, "Service binding died");
             dispatchError(null, ERR_NOT_CONNECTED, "Service binding died", -1);
         }
+
+        // Return null object , service don't permit client to bind
 
         @Override
         public void onNullBinding(ComponentName name) {

@@ -10,7 +10,7 @@
 #define JNI_TAG "VDiag.JNI"
 
 static std::unique_ptr<autodiag::DiagEngine> g_engine;
-
+// Declare JNI function call to native
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_vdiag_service_DiagHalBridge_nativeInit(
@@ -33,6 +33,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
     __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
                         "nativeInit: creating DiagEngine with halType=%s", halTypeStr.c_str());
 
+    // Choose HAL type
     auto factory = std::make_unique<autodiag::HalFactory>();
     std::unique_ptr<autodiag::IDiagnosticHal> hal;
     try {
@@ -42,6 +43,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
                             "nativeInit: failed to create HAL: %s", ex.what());
         return;
     }
+    // Create DiagEngine with HAL
     g_engine = std::make_unique<autodiag::DiagEngine>(std::move(hal));
     g_engine->start();
 
@@ -104,7 +106,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
         req.service = autodiag::UdsService::ReadDataByIdentifier;
         req.dataId  = propId;
     }
-
+    // Push to engine diag request
     const bool queued = g_engine->submit(req, [bridge](const autodiag::DiagResponse& r) {
         if (r.positive) {
             bridge->onResult(r.requestId, r.valueString, r.latencyUs);

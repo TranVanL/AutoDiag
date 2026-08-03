@@ -4,15 +4,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-
+// Class for health status and lifecycle manager
 public final class ShimSystemClient implements ISystemLifecycle {
-
     private static final String TAG = "DiagShimClient";
 
-    
     static final int MAX_QUEUE_DEPTH = 32;
 
-    
     private static final long HEARTBEAT_MS = 3_000L;
 
     
@@ -22,8 +19,8 @@ public final class ShimSystemClient implements ISystemLifecycle {
     private final Runnable mHeartbeat = new Runnable() {
         @Override
         public void run() {
+            // Run health status check every HEARTBEAT_MS
             performHealthCheck();
-           
             mHandler.postDelayed(this, HEARTBEAT_MS);
         }
     };
@@ -45,7 +42,8 @@ public final class ShimSystemClient implements ISystemLifecycle {
       
     }
 
- 
+    // Simulate like WatchdogService call health check through Binder IPC every HEARTBEAT_MS
+    // Below is function that WatchDogService request
     private void performHealthCheck() {
         final boolean halReady    = DiagHalBridge.isNativeReady();
         final boolean workerAlive = halReady && DiagHalBridge.isWorkerAlive();
