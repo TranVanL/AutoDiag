@@ -45,6 +45,20 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
         Log.i(TAG, "unsubscribeProperty() proId=0x" + Integer.toHexString(proId));
         mSubManager.unregister(proId, listener);
     }
+
+    @Override
+    public void subscribePropertyForArea(int proId, int areaId, float rateHz,
+                                         IDiagPropertyListener listener) {
+        PermissionGate.enforce(mService);
+        mSubManager.register(proId, areaId, rateHz, listener);
+    }
+
+    @Override
+    public void unsubscribePropertyForArea(int proId, int areaId,
+                                            IDiagPropertyListener listener) {
+        PermissionGate.enforce(mService);
+        mSubManager.unregister(proId, areaId, listener);
+    }
     
     @Override
     public void registerCallback(IDiagCallback callback) {

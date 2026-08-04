@@ -13,4 +13,9 @@ interface IDiagCarService {
     void getProperty(in DiagRequest request);
     void subscribeProperty(int proId , float rateHz , in IDiagPropertyListener listener);
     void unsubscribeProperty(int proId , in IDiagPropertyListener listener);
+    // Area-aware variants. The original methods remain for global properties.
+    void subscribePropertyForArea(int proId, int areaId, float rateHz,
+                                  in IDiagPropertyListener listener);
+    void unsubscribePropertyForArea(int proId, int areaId,
+                                    in IDiagPropertyListener listener);
 }

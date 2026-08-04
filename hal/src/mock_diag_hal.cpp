@@ -110,7 +110,7 @@ bool MockDiagnosticHal::isReady() const {
     return is_ready;
 }
 
-IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId) {
+IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId, uint32_t areaId) {
     if (!is_ready) {
         return {false, {}, "Mock HAL is not ready!"};
     }
@@ -118,6 +118,7 @@ IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId) {
     static std::mt19937 rng{std::random_device{}()};
 
     const auto id = static_cast<DiagProperty>(static_cast<uint16_t>(propId));
+    const auto area = static_cast<DiagArea>(areaId);
 
     if (id == DiagProperty::BatterySoc) {
         // drift value 77-82
@@ -141,7 +142,18 @@ IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId) {
         return {true, {vin.begin(), vin.end()}, {}};
     }
 
+    if (id == DiagProperty::TirePressure) {
+        // Return pressure in 0.1 bar units.
+        if (area == DiagArea::FL) {
+            return {true, {24}, {}}; // 2.4 bar
+        }
+        if (area == DiagArea::FR) {
+            return {true, {25}, {}}; // 2.5 bar
+        }
+        return {false, {}, "Invalid area"};
+    }
+
     return {false, {}, "Unknown propId"};
 }
 
-} // namespace autodiag 
+} // namespace autodiag

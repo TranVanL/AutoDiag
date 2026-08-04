@@ -269,7 +269,7 @@ std::uint32_t DoipDiagnosticHal::readU32(const std::uint8_t* p) {
            static_cast<std::uint32_t>(p[3]);
 }
 
-IDiagnosticHal::Result DoipDiagnosticHal::readProperty(uint32_t propId) {
+IDiagnosticHal::Result DoipDiagnosticHal::readProperty(uint32_t propId, uint32_t /*areaId*/) {
     
     const uint16_t did = static_cast<uint16_t>(propId);
     const std::vector<uint8_t> req = {
@@ -278,7 +278,5 @@ IDiagnosticHal::Result DoipDiagnosticHal::readProperty(uint32_t propId) {
         static_cast<uint8_t>(did & 0xFFU)
     };
     return SendAndReceive(req);
-}
-
 }
 

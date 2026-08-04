@@ -154,12 +154,26 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetQueueDepth(
     return static_cast<jint>(g_engine->getQueueDepth());
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__II(
+        JNIEnv* env, jclass clazz, jint propId, jint areaId);
+
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_com_vdiag_service_DiagHalBridge_nativeReadProperty(JNIEnv* env, jclass, jint propId) {
+Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__I(
+    JNIEnv* env, jclass clazz, jint propId) {
+    return Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__II(
+        env, clazz, propId, 0);
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__II(
+    JNIEnv* env, jclass, jint propId, jint areaId) {
     if (g_engine == nullptr) {
         __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
-                            "nativeReadProperty: engine not init — propId=0x%X", propId);
+                            "nativeReadProperty: engine not init — propId=0x%X areaId=%d",
+                            propId, areaId);
         return nullptr;
     }
 
@@ -167,7 +181,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeReadProperty(JNIEnv* env, jclass, jin
     if (hal == nullptr) return nullptr;
 
     autodiag::IDiagnosticHal::Result result =
-            hal->readProperty(static_cast<uint32_t>(propId));
+            hal->readProperty(static_cast<uint32_t>(propId), static_cast<uint32_t>(areaId));
 
     if (!result.success || result.data.empty()) {
         __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
@@ -195,6 +209,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeReadProperty(JNIEnv* env, jclass, jin
     }
 
     __android_log_print(ANDROID_LOG_DEBUG, JNI_TAG,
-                        "nativeReadProperty: propId=0x%X → \"%s\"", propId, out.c_str());
+                        "nativeReadProperty: propId=0x%X areaId=%d → \"%s\"",
+                        propId, areaId, out.c_str());
     return env->NewStringUTF(out.c_str());
 }

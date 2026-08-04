@@ -36,6 +36,8 @@ public class DiagHalBridge {
 
     public static native String nativeReadProperty(int propId);
 
+    public static native String nativeReadProperty(int propId, int areaId);
+
   
     private static native boolean nativeIsWorkerAlive();
 
@@ -97,9 +99,13 @@ public class DiagHalBridge {
     }
 
     public static String readProperty(int propId) {
+        return readProperty(propId, com.vdiag.sdk.DiagProperty.AREA_GLOBAL);
+    }
+
+    public static String readProperty(int propId, int areaId) {
         if (!sNativeReady) return null;
         try {
-            return nativeReadProperty(propId);
+            return nativeReadProperty(propId, areaId);
         } catch (UnsatisfiedLinkError e) {
             Log.e(TAG, "nativeReadProperty not linked", e);
             return null;

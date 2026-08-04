@@ -72,11 +72,14 @@ public final class DiagClient implements AutoCloseable {
     public final class SubscriptionToken implements AutoCloseable {
         // Member : DiagProperty , Listener callback , atomic variable for check subscription is active or not
         private final DiagProperty property;
+        private final int areaId;
         private final IDiagPropertyListener remoteListener;
         private final AtomicBoolean active = new AtomicBoolean(true);
 
-        private SubscriptionToken(DiagProperty property, IDiagPropertyListener remoteListener) {
+        private SubscriptionToken(DiagProperty property, int areaId,
+                                  IDiagPropertyListener remoteListener) {
             this.property = property;
+            this.areaId = areaId;
             this.remoteListener = remoteListener;
         }
 
@@ -88,7 +91,7 @@ public final class DiagClient implements AutoCloseable {
             if (!active.compareAndSet(true, false)) {
                 return;
             }
-            unsubscribeInternal(property, remoteListener);
+            unsubscribeInternal(property, areaId, remoteListener);
             activeSubscriptions.remove(this);
         }
 
@@ -248,6 +251,12 @@ public final class DiagClient implements AutoCloseable {
                                                float rateHz,
                                                Executor executor,
                                                PropertySubscriptionCallback callback) {
+        return subscribeProperty(property, DiagProperty.AREA_GLOBAL, rateHz, executor, callback);
+    }
+
+    public SubscriptionToken subscribeProperty(DiagProperty property, int areaId,
+                                               float rateHz, Executor executor,
+                                               PropertySubscriptionCallback callback) {
         Objects.requireNonNull(property, "property == null");
         Objects.requireNonNull(callback, "callback == null");
 
@@ -271,8 +280,12 @@ public final class DiagClient implements AutoCloseable {
         };
 
         try {
-            service.subscribeProperty(property.getPropId(), rateHz, remoteListener);
-            SubscriptionToken token = new SubscriptionToken(property, remoteListener);
+            if (areaId == DiagProperty.AREA_GLOBAL) {
+                service.subscribeProperty(property.getPropId(), rateHz, remoteListener);
+            } else {
+                service.subscribePropertyForArea(property.getPropId(), areaId, rateHz, remoteListener);
+            }
+            SubscriptionToken token = new SubscriptionToken(property, areaId, remoteListener);
             activeSubscriptions.add(token);
             Log.i(TAG, "subscribeProperty ok prop=" + property.name() + " rateHz=" + rateHz);
             return token;
@@ -282,13 +295,18 @@ public final class DiagClient implements AutoCloseable {
         }
     }
 
-    private void unsubscribeInternal(DiagProperty property, IDiagPropertyListener remoteListener) {
+    private void unsubscribeInternal(DiagProperty property, int areaId,
+                                     IDiagPropertyListener remoteListener) {
         final IDiagCarService service = diagService;
         if (service == null || remoteListener == null) {
             return;
         }
         try {
-            service.unsubscribeProperty(property.getPropId(), remoteListener);
+            if (areaId == DiagProperty.AREA_GLOBAL) {
+                service.unsubscribeProperty(property.getPropId(), remoteListener);
+            } else {
+                service.unsubscribePropertyForArea(property.getPropId(), areaId, remoteListener);
+            }
             Log.i(TAG, "unsubscribeProperty ok prop=" + property.name());
         } catch (RemoteException e) {
             Log.w(TAG, "unsubscribeProperty failed prop=" + property.name(), e);

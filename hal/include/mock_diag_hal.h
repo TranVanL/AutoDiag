@@ -12,7 +12,7 @@ class MockDiagnosticHal : public IDiagnosticHal {
 public: 
     MockDiagnosticHal();
     IDiagnosticHal::Result SendAndReceive(const std::vector<uint8_t> &req) override;
-    IDiagnosticHal::Result readProperty(uint32_t propId) override;
+    IDiagnosticHal::Result readProperty(uint32_t propId, uint32_t areaId) override;
     bool isReady() const override;
     void reset() override;
 private: 
@@ -25,4 +25,4 @@ private:
 
 };
 
-} // namespace autodiag 
+} // namespace autodiag

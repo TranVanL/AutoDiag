@@ -30,7 +30,7 @@ public:
         return Result{true, {0x62, 0xF1, 0x90, 'O', 'K'}, ""};
     }
 
-    Result readProperty(uint32_t) override {
+    Result readProperty(uint32_t, uint32_t) override {
         return Result{false, {}, "not used"};
     }
 

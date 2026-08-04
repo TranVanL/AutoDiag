@@ -29,6 +29,14 @@ enum class DiagProperty : std::uint16_t {
     TirePressure = 0x0201,
 };
 
+enum class DiagArea : std::uint32_t {
+    Global = 0,
+    FL     = 4,
+    FR     = 8,
+    RL     = 16,
+    RR     = 32,
+};
+
 enum class Nrc : std::uint8_t {
     PositiveResponse                    = 0x00,
     ServiceNotSupported                 = 0x11,

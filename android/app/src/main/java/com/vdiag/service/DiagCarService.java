@@ -31,7 +31,8 @@ public class DiagCarService extends Service {
         // Init members
         // 2. Binder-layer infrastructure.
         mClientRegistry = new ClientRegistry();
-        mSubManager     = new SubscriptionManager(DiagHalBridge::readProperty);
+        mSubManager     = new SubscriptionManager(
+            (SubscriptionManager.AreaPropertyPoller) DiagHalBridge::readProperty);
         mBinder         = new DiagCarServiceBinder(this, mClientRegistry, mSubManager);
         Log.i(TAG, "DiagCarService Binder created");
 

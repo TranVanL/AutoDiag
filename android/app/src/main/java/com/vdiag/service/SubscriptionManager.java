@@ -30,6 +30,11 @@ public final class SubscriptionManager {
         String readProperty(int propId);
     }
 
+    @FunctionalInterface
+    public interface AreaPropertyPoller {
+        String readProperty(int propId, int areaId);
+    }
+
 
     // A record for each subscription (Consist of information clients when they register )
     // A client can have one or multiple subscriptions
@@ -37,6 +42,7 @@ public final class SubscriptionManager {
             IDiagPropertyListener listener,
             IBinder binder,
             int propId,
+            int areaId,
             float rateHz,
             long tickInterval,              
             AtomicLong ticksLeft,          
@@ -57,15 +63,29 @@ public final class SubscriptionManager {
             });
 
     private final PropertyPoller mPoller;
+    private final AreaPropertyPoller mAreaPoller;
 
    
     public SubscriptionManager(PropertyPoller poller) {
+        this(poller, (propId, areaId) -> poller.readProperty(propId));
+    }
+
+    public SubscriptionManager(AreaPropertyPoller poller) {
+        this(null, poller);
+    }
+
+    private SubscriptionManager(PropertyPoller poller, AreaPropertyPoller areaPoller) {
         mPoller = poller;
+        mAreaPoller = areaPoller;
         mScheduler.scheduleAtFixedRate(this::onTick, TICK_MS, TICK_MS, TimeUnit.MILLISECONDS);
         Log.i(TAG, "SubscriptionManager started — tick=" + TICK_MS + "ms");
     }
 
     public void register(int propId, float rateHz, IDiagPropertyListener listener) {
+        register(propId, 0, rateHz, listener);
+    }
+
+    public void register(int propId, int areaId, float rateHz, IDiagPropertyListener listener) {
         if (listener == null) return;
         // Get binder object represent client
         IBinder binder = listener.asBinder();
@@ -100,6 +120,7 @@ public final class SubscriptionManager {
                 listener,
                 binder,
                 propId,
+                areaId,
                 rateHz,
                 tickInterval,
                 new AtomicLong(initialTicks),
@@ -111,17 +132,22 @@ public final class SubscriptionManager {
        
         Log.i(TAG, "register propId=0x" + Integer.toHexString(propId)
                 + " rateHz=" + rateHz
+                + " areaId=" + areaId
                 + " tickInterval=" + tickInterval
                 + " total=" + mRecords.size());
     }
 
     public void unregister(int propId, IDiagPropertyListener listener) {
+        unregister(propId, 0, listener);
+    }
+
+    public void unregister(int propId, int areaId, IDiagPropertyListener listener) {
         if (listener == null) return;
         IBinder binder = listener.asBinder();
 
         // Remove out of list and unlink to death recipient
         mRecords.removeIf(r -> {
-            if (r.propId() == propId && r.binder() == binder) {
+            if (r.propId() == propId && r.areaId() == areaId && r.binder() == binder) {
                 try {
                     r.binder().unlinkToDeath(r.deathRecipient(), 0);
                 } catch (Exception ignored) {
@@ -154,8 +180,11 @@ public final class SubscriptionManager {
             r.ticksLeft().set(isOnChange ? ON_CHANGE_CHECK_TICKS : r.tickInterval());
 
             // Compare new and old value
-            String newValue = mPoller.readProperty(r.propId());
-            if (newValue == null) continue;
+            String newValue = mAreaPoller.readProperty(r.propId(), r.areaId());
+            if (newValue == null) {
+                dispatchUnavailable(r);
+                continue;
+            }
 
             String oldValue = r.lastValue().getAndSet(newValue);
 
@@ -171,7 +200,7 @@ public final class SubscriptionManager {
     private void dispatchEvent(SubscriptionRecord r, String value) {
         DiagPropertyEvent event = new DiagPropertyEvent();
         event.propertyId = r.propId();
-        event.areaId     = 0;   
+        event.areaId     = r.areaId();
         event.status     = 0;  
         event.timestampNs = System.nanoTime();
         event.stringValue = value;
@@ -189,6 +218,15 @@ public final class SubscriptionManager {
             
             Log.w(TAG, "dispatch RemoteException — force-removing propId=0x"
                     + Integer.toHexString(r.propId()));
+            removeByBinder(r.binder());
+        }
+    }
+
+    private void dispatchUnavailable(SubscriptionRecord r) {
+        try {
+            // Dedicated error channel; code 1 maps to UNAVAILABLE.
+            r.listener().onPropertyError(r.propId(), r.areaId(), 1);
+        } catch (RemoteException e) {
             removeByBinder(r.binder());
         }
     }

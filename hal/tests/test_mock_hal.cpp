@@ -133,6 +133,33 @@ void testReadPropertyVinConstant() {
     expectTrue(actual == expected, "read_property_vin_value");
 }
 
+void testReadPropertyTirePressureAreaAware() {
+    autodiag::MockDiagnosticHal hal;
+
+    const auto fl = hal.readProperty(
+            static_cast<uint32_t>(autodiag::DiagProperty::TirePressure),
+            static_cast<uint32_t>(autodiag::DiagArea::FL));
+    expectTrue(fl.success, "read_property_tire_pressure_fl_success");
+    expectTrue(fl.data.size() == 1, "read_property_tire_pressure_fl_size_1");
+    if (!fl.data.empty()) {
+        expectEqByte(fl.data[0], 24, "read_property_tire_pressure_fl_value");
+    }
+
+    const auto fr = hal.readProperty(
+            static_cast<uint32_t>(autodiag::DiagProperty::TirePressure),
+            static_cast<uint32_t>(autodiag::DiagArea::FR));
+    expectTrue(fr.success, "read_property_tire_pressure_fr_success");
+    expectTrue(fr.data.size() == 1, "read_property_tire_pressure_fr_size_1");
+    if (!fr.data.empty()) {
+        expectEqByte(fr.data[0], 25, "read_property_tire_pressure_fr_value");
+    }
+
+    const auto invalid = hal.readProperty(
+            static_cast<uint32_t>(autodiag::DiagProperty::TirePressure),
+            static_cast<uint32_t>(autodiag::DiagArea::Global));
+    expectTrue(!invalid.success, "read_property_tire_pressure_invalid_unavailable");
+}
+
 }  // namespace
 
 int main() {
@@ -144,6 +171,7 @@ int main() {
     testReadPropertySocInRange();
     testReadPropertyRpmInRange();
     testReadPropertyVinConstant();
+    testReadPropertyTirePressureAreaAware();
 
     if (g_failures == 0) {
         std::cout << "All mock HAL tests passed. tests=" << g_tests << "\n";

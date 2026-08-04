@@ -16,7 +16,7 @@ public:
     };
 
     virtual Result SendAndReceive(const std::vector<uint8_t> &req) = 0;
-    virtual Result readProperty(uint32_t propId) = 0;
+    virtual Result readProperty(uint32_t propId, uint32_t areaId = 0) = 0;
     virtual bool isReady() const = 0;
     virtual void reset() = 0;
     virtual ~IDiagnosticHal() = default;
