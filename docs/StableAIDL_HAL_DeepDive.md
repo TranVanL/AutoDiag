@@ -937,6 +937,24 @@ Nếu không có `@VintfStability`:
 - Không thể dùng làm HAL interface chính thức.
 
 ---
+### NAtive HAL service C++ connect to init.vdiag.rc 
+1.1. Native HAL service là gì?
+Đây là binary native (C++) chạy ở vendor partition, có nhiệm vụ:
+
+Register AIDL HAL interface với hwservicemanager
+Nhận request từ framework/app qua Binder
+Giao tiếp với hardware (CAN, DoIP, v.v.)
+
+Nó khác với Java service trong app. Java service chạy trong Android Runtime (ART), còn native HAL chạy như một daemon process bình thường, được init spawn
+1.2. Cấu trúc native HAL service
+hardware/interfaces/vdiag/aidl/
+├── android.hardware.vdiag/
+│   └── IDiagnosticHal.aidl
+├── default/
+│   ├── DiagnosticHal.cpp      ← implementation
+│   ├── DiagnosticHal.h
+│   ├── main.cpp               ← entry point
+│   └── Android.bp             ← build rule
 
 # 12. C++ / Java / NDK backend sinh ra gì?
 
@@ -1134,6 +1152,7 @@ adb shell cat /system/etc/vintf/compatibility_matrix.xml | grep vdiag
 # Kiểm tra VINTF object
 adb shell vintf --dump
 ```
+
 
 ## 14.5. Self-check list
 

@@ -10,6 +10,7 @@
 // Day 61 creates the AIDL sources + understands @VintfStability.
 // Day 66 runs the formal freeze workflow that snapshots aidl_api/.
 
+
 aidl_interface {
     name: "com.vdiag.hal",
     vendor: true,

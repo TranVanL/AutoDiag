@@ -1,0 +1,16 @@
+# Copyright (C) 2024 VDiag Project
+# VDiag HAL service — starts at boot in vendor context
+
+# Copy to init folder , init process will base on it and init service 
+service vdiag_hal /vendor/bin/hw/android.hardware.vdiag@1.0-service
+    class hal
+    user system
+    group system
+    interface android.hardware.vdiag@1.0::IDiagnosticHal default
+    writepid /dev/cpuset/foreground/tasks
+
+on boot
+    setprop vdiag.hal.ready 0
+
+on property:vdiag.hal.ready=1
+    log i vdiag "VDiag HAL ready"

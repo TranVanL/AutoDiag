@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Privileged permission allowlist for the VDiag system app.
+     Must be installed to /system/etc/permissions/ or /vendor/etc/permissions/.
+     Without this file, Android 9+ will refuse to grant privileged permissions. -->
+<privapp-permissions package="com.vdiag">
+    <permission name="com.vdiag.permission.DIAGNOSE"/>
+    <permission name="android.car.permission.CAR_DIAGNOSTICS"/>
+</privapp-permissions>

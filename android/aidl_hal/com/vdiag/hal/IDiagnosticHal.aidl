@@ -12,6 +12,8 @@ import com.vdiag.hal.DiagHalResult;
  * This is the vendor-facing counterpart of the app-layer IDiagCarService
  * AIDL interface, which does NOT require @VintfStability.
  */
+
+ // Annotated with keywork @Vinft so it become a part of Vendor Interface (that communication between system partition and vendor partition)
 @VintfStability
 interface IDiagnosticHal {
     /** Send a diagnostic request and wait for the ECU response. */

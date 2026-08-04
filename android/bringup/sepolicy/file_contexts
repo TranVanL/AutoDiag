@@ -1,0 +1,5 @@
+# Copyright (C) 2024 VDiag Project
+# File labels for VDiag HAL artifacts.
+
+/vendor/bin/hw/android\.hardware\.vdiag.*    u:object_r:vdiag_hal_exec:s0
+/data/vendor/vdiag(/.*)?                     u:object_r:vdiag_hal_data_file:s0

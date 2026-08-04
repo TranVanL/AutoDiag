@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Framework compatibility matrix fragment.
+     Place in system/etc/vintf/ or merge into the device framework matrix.
+     Show that framework requires what HALs and versions. -->
+<compatibility-matrix version="1.0" type="framework">
+    <hal format="aidl" optional="true">
+        <name>android.hardware.vdiag</name>
+        <version>1</version>
+        <interface>
+            <name>IDiagnosticHal</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+</compatibility-matrix>
