@@ -190,22 +190,20 @@ Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__II(
         return nullptr;
     }
 
-   
-    bool isText = true;
-    for (uint8_t b : result.data) {
-        if (b < 32 || b > 126) { isText = false; break; }
-    }
 
+    const uint16_t id = static_cast<uint16_t>(propId);
     std::string out;
-    if (isText) {
-        out = std::string(result.data.begin(), result.data.end());
+
+    if (id == static_cast<uint16_t>(autodiag::DiagProperty::BatterySoc)) {
+        out = std::to_string(result.data[0]);
+    } else if (id == static_cast<uint16_t>(autodiag::DiagProperty::RPM) && result.data.size() >= 2) {
+        const uint16_t raw = static_cast<uint16_t>(result.data[0] << 8) |
+                             static_cast<uint16_t>(result.data[1]);
+        out = std::to_string(raw / 4U);
+    } else if (id == static_cast<uint16_t>(autodiag::DiagProperty::TirePressure)) {
+        out = std::to_string(result.data[0]);
     } else {
-        // Big-endian int (1-4 bytes)
-        int64_t val = 0;
-        for (uint8_t b : result.data) {
-            val = (val << 8) | b;
-        }
-        out = std::to_string(val);
+        out = std::string(result.data.begin(), result.data.end());
     }
 
     __android_log_print(ANDROID_LOG_DEBUG, JNI_TAG,
