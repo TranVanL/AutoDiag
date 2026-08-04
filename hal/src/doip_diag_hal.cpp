@@ -279,4 +279,4 @@ IDiagnosticHal::Result DoipDiagnosticHal::readProperty(uint32_t propId, uint32_t
     };
     return SendAndReceive(req);
 }
-
+} // namespace autodiag

@@ -101,7 +101,7 @@ void testReadPropertySocInRange() {
     autodiag::MockDiagnosticHal hal;
     // Run a few times to catch out-of-range drift values
     for (int i = 0; i < 20; ++i) {
-        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::BatterySoc));
+        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::BatterySoc), 0);
         expectTrue(result.success, "read_property_soc_success");
         expectTrue(result.data.size() == 1, "read_property_soc_size_1");
         if (!result.data.empty()) {
@@ -114,7 +114,7 @@ void testReadPropertySocInRange() {
 void testReadPropertyRpmInRange() {
     autodiag::MockDiagnosticHal hal;
     for (int i = 0; i < 20; ++i) {
-        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::RPM));
+        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::RPM), 0);
         expectTrue(result.success, "read_property_rpm_success");
         expectTrue(result.data.size() == 2, "read_property_rpm_size_2");
         if (result.data.size() == 2) {
@@ -126,7 +126,7 @@ void testReadPropertyRpmInRange() {
 
 void testReadPropertyVinConstant() {
     autodiag::MockDiagnosticHal hal;
-    const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::VIN));
+    const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::VIN), 0);
     expectTrue(result.success, "read_property_vin_success");
     const std::string expected = "VINFAST12345678901";
     const std::string actual(result.data.begin(), result.data.end());
