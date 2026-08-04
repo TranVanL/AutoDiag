@@ -1,0 +1,4 @@
+# Copyright (C) 2024 VDiag Project
+# Property labels for VDiag HAL properties.
+
+vdiag\.hal\..*    u:object_r:vendor_vdiag_prop:s0

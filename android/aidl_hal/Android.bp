@@ -1,0 +1,23 @@
+// Soong build rule for the stable VDiag vendor HAL AIDL interface.
+//
+// Key points:
+//   - vendor: true  → built into the vendor partition.
+//   - stability: "vintf"  → enforces @VintfStability and VINTF manifest entry.
+//   - frozen: true  → no breaking changes allowed; new fields/methods must be
+//     backward-compatible.
+//   - versions: ["1"]  → version 1 is frozen and shipped to vendors.
+//
+// Day 61 creates the AIDL sources + understands @VintfStability.
+// Day 66 runs the formal freeze workflow that snapshots aidl_api/.
+
+
+aidl_interface {
+    name: "com.vdiag.hal",
+    vendor: true,
+    srcs: ["com/vdiag/hal/*.aidl"],
+    stability: "vintf",
+    frozen: true,
+    versions: [
+        "1",
+    ],
+}

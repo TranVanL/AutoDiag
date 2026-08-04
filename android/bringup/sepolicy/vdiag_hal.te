@@ -1,0 +1,36 @@
+# Copyright (C) 2024 VDiag Project
+# SELinux type enforcement for the VDiag HAL service.
+# Production would be compiled into the vendor sepolicy image.
+
+# ── Type declarations ─────────────────────────────────────────────────────────
+type vdiag_hal, domain;
+type vdiag_hal_exec, exec_type, vendor_file_type, file_type;
+type vdiag_hal_data_file, file_type, data_file_type;
+
+# ── Init domain transition: init spawns vdiag_hal ─────────────────────────────
+init_daemon_domain(vdiag_hal)
+
+# ── Binder IPC with system_server / CarService ────────────────────────────────
+binder_use(vdiag_hal)
+binder_call(vdiag_hal, system_server)
+binder_call(system_server, vdiag_hal)
+
+# ── Stable AIDL HAL registration with hwservicemanager ────────────────────────
+hal_server_domain(vdiag_hal, hal_vehicle)
+add_hwservice(vdiag_hal, hal_vehicle_hwservice)
+
+# ── Network access for DoIP / UDS over socket ─────────────────────────────────
+allow vdiag_hal self:socket create_socket_perms;
+allow vdiag_hal self:rawip_socket create_socket_perms;
+
+# ── CAN device access (e.g. /dev/can0) ────────────────────────────────────────
+allow vdiag_hal can_device:chr_file rw_file_perms;
+
+# ── Logging to logd ───────────────────────────────────────────────────────────
+allow vdiag_hal logd:unix_dgram_socket sendto;
+
+# ── Vendor property read/write ────────────────────────────────────────────────
+set_prop(vdiag_hal, vendor_vdiag_prop)
+
+# ── Least-privilege hard denies ───────────────────────────────────────────────
+neverallow vdiag_hal { app_data_file system_data_file }:file *;

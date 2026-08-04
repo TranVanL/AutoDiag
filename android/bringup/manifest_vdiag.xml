@@ -1,0 +1,11 @@
+
+<!-- It will check correlation of VINTF manifest and framework matrix compatibility at boot time , Manifest show at version , vendor provides what 
+Hal service will register with hwmanager , hwmanager will check at boot time and check if it compatible and need to init HAL service because framework requires it. -->
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest version="2.0" type="device">
+    <hal format="aidl">
+        <name>android.hardware.vdiag</name>
+        <version>1</version>
+        <fqname>IDiagnosticHal/default</fqname>
+    </hal>
+</manifest>
