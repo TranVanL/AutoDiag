@@ -170,21 +170,19 @@ public final class SubscriptionManager {
     // Dispatch Event of property to client
     private void dispatchEvent(SubscriptionRecord r, String value) {
         DiagPropertyEvent event = new DiagPropertyEvent();
-        event.proId      = r.propId();
+        event.propertyId = r.propId();
         event.areaId     = 0;   
-        event.timestampNs = (int) (System.nanoTime() & 0x7FFF_FFFFL);
-        event.valueString = value;
         event.status     = 0;  
-
+        event.timestampNs = System.nanoTime();
+        event.stringValue = value;
  
         try {
-            event.valueInt = Integer.parseInt(value);
+            event.intValue = Integer.parseInt(value);
         } catch (NumberFormatException ignored) {
-            event.valueInt = 0;
+            event.intValue = 0;
         }
 
         try {
-
             // Call function that client request to handle event through Binder IPC
             r.listener().onPropertyChanged(event);
         } catch (RemoteException e) {

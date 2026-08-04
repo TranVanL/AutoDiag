@@ -19,13 +19,14 @@ enum class UdsService : std::uint8_t {
 };
 
 enum class DiagProperty : std::uint16_t {
-    VIN         = 0xF190,
-    SoftwareVer = 0xF187,
-    SOC         = 0x0105,
-    RPM         = 0x010C,
-    DtcList     = 0xF191,
-    DtcClear    = 0xF193,
-    Timestamp   = 0xF192,
+    VIN          = 0xF190,
+    SoftwareVer  = 0xF187,
+    BatterySoc   = 0x0105,
+    RPM          = 0x010C,
+    DtcList      = 0xF191,
+    DtcClear     = 0xF193,
+    Timestamp    = 0xF192,
+    TirePressure = 0x0201,
 };
 
 enum class Nrc : std::uint8_t {

@@ -80,7 +80,7 @@ DiagResponse decode(std::uint32_t reqId, const std::vector<std::uint8_t>& bytes)
             const auto raw = static_cast<std::uint16_t>(resp.data[0] << 8U) |
                              static_cast<std::uint16_t>(resp.data[1]);
             resp.valueString = std::to_string(raw / 4U);
-        } else if (did == static_cast<std::uint16_t>(DiagProperty::SOC) && !resp.data.empty()) {
+        } else if (did == static_cast<std::uint16_t>(DiagProperty::BatterySoc) && !resp.data.empty()) {
             resp.valueString = std::to_string(resp.data[0]);
         }
     }

@@ -28,7 +28,7 @@ void MockDiagnosticHal::initDIDDb() {
         'S' , 'W' , '_' , 'V' , '3' , '.' , '2' , '.' , '1' , '_' , 'A' , 'A' , 'O' , 'S'
     };
 
-    DID_db[static_cast<uint16_t>(DiagProperty::SOC)] = {78};
+    DID_db[static_cast<uint16_t>(DiagProperty::BatterySoc)] = {78};
     DID_db[static_cast<uint16_t>(DiagProperty::RPM)] = {0x32 , 0x70};
     
 }
@@ -119,7 +119,7 @@ IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId) {
 
     const auto id = static_cast<DiagProperty>(static_cast<uint16_t>(propId));
 
-    if (id == DiagProperty::SOC) {
+    if (id == DiagProperty::BatterySoc) {
         // drift value 77-82
         std::uniform_int_distribution<int> dist(77, 82);
         const uint8_t soc = static_cast<uint8_t>(dist(rng));

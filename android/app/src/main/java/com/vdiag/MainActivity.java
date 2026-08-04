@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
 
         mGetVinButton.setOnClickListener(v -> requestProperty(DiagProperty.VIN));
         mGetSwVersionButton.setOnClickListener(v -> requestProperty(DiagProperty.SW_VERSION));
-        mGetSOC.setOnClickListener(view -> requestProperty(DiagProperty.SOC));
+        mGetSOC.setOnClickListener(view -> requestProperty(DiagProperty.BATTERY_SOC));
         mGetRPM.setOnClickListener(view -> requestProperty(DiagProperty.RPM));
         mGetDtcList.setOnClickListener(view -> requestProperty(DiagProperty.DTC_LIST));
         mClearDtc.setOnClickListener(view -> requestProperty(DiagProperty.DTC_CLEAR));
@@ -193,15 +193,15 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         if (mSocToken == null || !mSocToken.isActive()) {
             try {
                 mSocToken = mDiagClient.subscribeProperty(
-                        DiagProperty.SOC,
+                        DiagProperty.BATTERY_SOC,
                         1.0f,
                         mUiExecutor,
                         new DiagClient.PropertySubscriptionCallback() {
                             @Override
                             public void onPropertyChanged(DiagProperty property, DiagPropertyEvent event) {
-                                String val = event != null && event.valueString != null
-                                        ? event.valueString
-                                        : String.valueOf(event != null ? event.valueInt : 0);
+                                String val = event != null && event.stringValue != null
+                                        ? event.stringValue
+                                        : String.valueOf(event != null ? event.intValue : 0);
                                 mSocLiveValue.setText(val + " %");
                             }
 
@@ -225,9 +225,9 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
                         new DiagClient.PropertySubscriptionCallback() {
                             @Override
                             public void onPropertyChanged(DiagProperty property, DiagPropertyEvent event) {
-                                String val = event != null && event.valueString != null
-                                        ? event.valueString
-                                        : String.valueOf(event != null ? event.valueInt : 0);
+                                String val = event != null && event.stringValue != null
+                                        ? event.stringValue
+                                        : String.valueOf(event != null ? event.intValue : 0);
                                 mRpmLiveValue.setText(val + " rpm");
                             }
 

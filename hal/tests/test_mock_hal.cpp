@@ -101,7 +101,7 @@ void testReadPropertySocInRange() {
     autodiag::MockDiagnosticHal hal;
     // Run a few times to catch out-of-range drift values
     for (int i = 0; i < 20; ++i) {
-        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::SOC));
+        const auto result = hal.readProperty(static_cast<uint32_t>(autodiag::DiagProperty::BatterySoc));
         expectTrue(result.success, "read_property_soc_success");
         expectTrue(result.data.size() == 1, "read_property_soc_size_1");
         if (!result.data.empty()) {
