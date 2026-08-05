@@ -11,10 +11,28 @@
         android:label="Vehicle Diagnostic Access"
         android:protectionLevel="signature"/>
 
+    <permission
+        android:name="com.vdiag.permission.READ_BATTERY"
+        android:label="Read Battery State of Charge"
+        android:protectionLevel="signature"/>
+
+    <permission
+        android:name="com.vdiag.permission.READ_TIRES"
+        android:label="Read Tire Pressure"
+        android:protectionLevel="signature"/>
+
+    <permission
+        android:name="com.vdiag.permission.READ_POWERTRAIN"
+        android:label="Read Powertrain RPM"
+        android:protectionLevel="signature"/>
+
     <!-- ============================================================
          User app get permission from system
          ============================================================ -->
         <uses-permission android:name="com.vdiag.permission.DIAGNOSE" />
+        <uses-permission android:name="com.vdiag.permission.READ_BATTERY" />
+        <uses-permission android:name="com.vdiag.permission.READ_TIRES" />
+        <uses-permission android:name="com.vdiag.permission.READ_POWERTRAIN" />
         <uses-permission android:name="android.permission.INTERNET" />
 
     <application

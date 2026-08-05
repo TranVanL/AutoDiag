@@ -31,7 +31,7 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     @Override
     public void subscribeProperty(int proId, float rateHz, IDiagPropertyListener listener) {
         // Enforce permission before run business logic , only clients have permission that already granted (Defined by manifest) only can bind to service
-        PermissionGate.enforce(mService);
+        PermissionGate.enforceProperty(mService , proId);
         Log.i(TAG, "subscribeProperty() proId=0x" + Integer.toHexString(proId)
                 + " rateHz=" + rateHz);
         //  Call real function
@@ -41,7 +41,7 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     @Override
 
     public void unsubscribeProperty(int proId, IDiagPropertyListener listener) {
-        PermissionGate.enforce(mService);
+        PermissionGate.enforceProperty(mService , proId);
         Log.i(TAG, "unsubscribeProperty() proId=0x" + Integer.toHexString(proId));
         mSubManager.unregister(proId, listener);
     }
@@ -49,7 +49,7 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     @Override
     public void subscribePropertyForArea(int proId, int areaId, float rateHz,
                                          IDiagPropertyListener listener) {
-        PermissionGate.enforce(mService);
+        PermissionGate.enforceProperty(mService , proId);
         mSubManager.register(proId, areaId, rateHz, listener);
     }
 
@@ -78,14 +78,15 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
 
     @Override
     public void getProperty(DiagRequest request) {
-        PermissionGate.enforce(mService);
-        int callerPid = Binder.getCallingPid();
-        int callerUid = Binder.getCallingUid();
 
         if (request == null) {
             Log.e(TAG, "Invalid DiagRequest");
             return;
         }
+
+        PermissionGate.enforceProperty(mService,request.propertyId);
+        int callerPid = Binder.getCallingPid();
+        int callerUid = Binder.getCallingUid();
 
         Log.d(TAG, "getProperty() reqId=" + request.requestId + " propId=0x" + Integer.toHexString(request.propertyId));
 
