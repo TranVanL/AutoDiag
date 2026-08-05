@@ -17,8 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Helper that binds to DiagCarService and exposes convenience methods
- * used by the Day 69 permission-gate instrumentation tests.
+ * Helper that binds to DiagCarService and exposes convenience methods 
  */
 public final class PermissionGateTestHelper {
 

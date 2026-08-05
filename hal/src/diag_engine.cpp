@@ -31,13 +31,8 @@ void DiagEngine::start() {
     }
 }
 
-bool DiagEngine::submit(const DiagRequest& req, Callback cb) {
+bool DiagEngine::submit(RequestPriority priority, const DiagRequest& req, Callback cb) {
     if (!cb) {
-        return false;
-    }
-
-    WorkItem item{req, std::move(cb)};
-    if (!item.session.transition(State::Pending)) {
         return false;
     }
 
@@ -46,7 +41,7 @@ bool DiagEngine::submit(const DiagRequest& req, Callback cb) {
         if (!running_.load() || stop_.load()) {
             return false;
         }
-        queue_.push(std::move(item));
+        queue_.emplace(priority, seq_.fetch_add(1), std::move(req), std::move(cb));
         queueDepth_.fetch_add(1);
     }
     cv_.notify_one();
@@ -89,8 +84,9 @@ void DiagEngine::shutdown() {
 void DiagEngine::workerLoop() {
     workerAlive_.store(true);
     while (true) {
-        WorkItem item{};
-
+       
+        DiagRequest req{};
+        Callback cb{};
         {
             std::unique_lock<std::mutex> lk(mu_);
             cv_.wait(lk, [&] { return !queue_.empty() || stop_.load(); });
@@ -99,14 +95,16 @@ void DiagEngine::workerLoop() {
                 break;
             }
 
-            item = std::move(queue_.front());
+            req = std::move(std::get<2>(queue_.top()));
+            cb = std::move(std::get<3>(queue_.top()));
             queue_.pop();
             queueDepth_.fetch_sub(1);
         }
 
+        
         const auto t0 = std::chrono::steady_clock::now();
         DiagResponse response{};
-        response.requestId = item.req.requestId;
+        response.requestId = req.requestId;
 
         if (hal_ == nullptr) {
             response.positive = false;
@@ -115,35 +113,29 @@ void DiagEngine::workerLoop() {
         } else {
             // hal_->isReady() is NOT checked here intentionally:
             // SendAndReceive performs lazy reconnect if socket is down.
-            const auto encoded = encode(item.req);
+            const auto encoded = encode(req);
             const auto halResult = hal_->SendAndReceive(encoded);
             if (!halResult.success) {
                 response.positive = false;
                 response.nrc = Nrc::CommunicationError;
                 response.valueString = halResult.error;
             } else {
-                response = decode(item.req.requestId, halResult.data);
+                response = decode(req.requestId, halResult.data);
             }
         }
 
         const auto t1 = std::chrono::steady_clock::now();
         response.latencyUs = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
-        if (response.positive) {
-            item.session.transition(State::Done);
-        } else {
-            item.session.transition(State::Error);
-        }
-
         try {
-            item.cb(response);
+            cb(response);
         } catch (const std::exception& ex) {
             std::cerr << "DiagEngine callback exception: " << ex.what() << "\n";
         } catch (...) {
             std::cerr << "DiagEngine callback unknown exception\n";
         }
 
-        item.session.reset();
+        // item.session.reset();
     }
     workerAlive_.store(false);
 }

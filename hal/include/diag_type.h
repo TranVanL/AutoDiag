@@ -67,6 +67,14 @@ struct DiagResponse {
     std::string valueString {};
 };
 
+enum class RequestPriority : std::uint8_t {
+    CRITICAL = 0,
+    HIGH     = 1,
+    NORMAL   = 2,
+    LOW      = 3,
+};
+
+
 inline std::string udsServiceToString(UdsService service) {
     switch (service) {
         case UdsService::DiagnosticSessionControl: return "DiagnosticSessionControl";

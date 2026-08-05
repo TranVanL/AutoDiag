@@ -94,20 +94,24 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
 
     // Build DiagRequest — map propertyId → UDS service + dataId
     autodiag::DiagRequest req{};
+    autodiag::RequestPriority pri = autodiag::RequestPriority::NORMAL;
     req.requestId = static_cast<std::uint32_t>(requestId);
 
     const auto propId = static_cast<std::uint16_t>(static_cast<unsigned int>(propertyID));
     if (propId == static_cast<std::uint16_t>(autodiag::DiagProperty::DtcList)) {
         req.service      = autodiag::UdsService::ReadDTC;
         req.subFunction  = 0x02;  // reportDTCByStatusMask
+        pri = autodiag::RequestPriority::CRITICAL;
     } else if (propId == static_cast<std::uint16_t>(autodiag::DiagProperty::DtcClear)) {
         req.service = autodiag::UdsService::ClearDTC;
+        pri = autodiag::RequestPriority::HIGH;
     } else {
         req.service = autodiag::UdsService::ReadDataByIdentifier;
         req.dataId  = propId;
+        pri = autodiag::RequestPriority::HIGH;
     }
     // Push to engine diag request
-    const bool queued = g_engine->submit(req, [bridge](const autodiag::DiagResponse& r) {
+    const bool queued = g_engine->submit(pri,req, [bridge](const autodiag::DiagResponse& r) {
         if (r.positive) {
             bridge->onResult(r.requestId, r.valueString, r.latencyUs);
         } else {
