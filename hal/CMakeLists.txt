@@ -15,8 +15,7 @@ add_library(vdiag_hal STATIC
     src/doip_diag_hal.cpp
     src/session_state.cpp
     src/diag_engine.cpp
-    src/isotp_codec.cpp
-    src/can_diag_hal.cpp
+    
 )
 target_include_directories(vdiag_hal PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
