@@ -15,6 +15,8 @@ add_library(vdiag_hal STATIC
     src/doip_diag_hal.cpp
     src/session_state.cpp
     src/diag_engine.cpp
+    src/isotp_codec.cpp
+    src/can_diag_hal.cpp
 )
 target_include_directories(vdiag_hal PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -43,9 +45,21 @@ if (AUTODIAG_HAL_BUILD_TESTS AND NOT ANDROID)
 
     target_link_libraries(test_uds_codec PRIVATE vdiag_hal)
 
+    add_executable(test_isotp_codec
+        tests/test_isotp_codec.cpp
+    )
+    target_link_libraries(test_isotp_codec PRIVATE vdiag_hal)
+
+    add_executable(test_can_diag_hal
+        tests/test_can_diag_hal.cpp
+    )
+    target_link_libraries(test_can_diag_hal PRIVATE vdiag_hal)
+
     add_test(NAME uds_encode_decode_20_tests COMMAND test_uds_codec)
     add_test(NAME mock_hal_5_tests COMMAND test_mock_hal)
     add_test(NAME session_state_5_tests COMMAND test_session_state)
+    add_test(NAME isotp_codec_8_tests COMMAND test_isotp_codec)
+    add_test(NAME can_diag_hal_3_tests COMMAND test_can_diag_hal)
 
 endif()
 
