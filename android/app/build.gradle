@@ -48,12 +48,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+// Add a specific compileJava task to resolve ambiguity if called by external tools
+tasks.register("compileJava") {
+    dependsOn("compileDebugJavaWithJavac")
 }
 
 dependencies {
