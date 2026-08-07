@@ -8,7 +8,7 @@
 namespace autodiag {
 namespace can {
 
-#include "can_frame.h"
+#include "socketcan_types.h"
 class CanDiagnosticHal : public IDiagnosticHal {
 public:
     // txId: CAN ID used for diagnostic requests (default OBD-II functional 0x7DF)
