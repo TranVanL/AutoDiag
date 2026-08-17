@@ -83,6 +83,26 @@ jobs:
             hal/build/Testing/Temporary/*.txt 
           retention-days: 5
 
+  # Build Arm 64 
+  build-arm64: 
+    name: Build ARM64 with toolchain-aarch64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install ARM Toolchain + QEMU 
+        run: sudo apt-get install -y -qq \
+              gcc-aarch64-linux-gnu \
+              g++-aarch64-linux-gnu \
+              qemu-user \
+              qemu-user-static
+      - name: Cross - compile + QEMU test 
+        run: cd hal && mkdir build_arm64 && cd build_arm64
+          cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-aarch64.cmake \
+                   -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu"
+          make -j$(nproc) && ctest --output-on-failure
+
   # Job 2 : Build Android APK
   build-android:
     name: Android APK Build (assembleDebug)
