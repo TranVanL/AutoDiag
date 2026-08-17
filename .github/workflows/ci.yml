@@ -100,14 +100,14 @@ jobs:
               qemu-user \
               qemu-user-static
       - name: Cross - compile + QEMU test 
-  run: |
-    cd hal
-    mkdir -p build_arm64
-    cd build_arm64
-    cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-aarch64.cmake \
-             -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu"
-    make -j$(nproc)
-    ctest --output-on-failure
+        run: |
+              cd hal
+              mkdir -p build_arm64
+              cd build_arm64
+              cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-aarch64.cmake \
+              -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu"
+              make -j$(nproc)
+              ctest --output-on-failure
 
 
   # Job 2 : Build Android APK
