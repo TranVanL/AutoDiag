@@ -23,6 +23,7 @@ public:
     IDiagnosticHal::Result readProperty(uint32_t propId, uint32_t areaId = 0) override;
     bool isReady() const override;
     void reset() override;
+    void flashFirmware(const uint8_t* data, size_t len) override;
 
     // Explicit SocketCAN lifecycle (separate from constructor for testability).
     bool open();

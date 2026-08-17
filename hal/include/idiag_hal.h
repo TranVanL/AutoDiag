@@ -20,6 +20,8 @@ public:
     virtual bool isReady() const = 0;
     virtual void reset() = 0;
     virtual ~IDiagnosticHal() = default;
+    virtual void flashFirmware(const uint8_t* data, size_t len) = 0;
+    
 };
 
 enum class HalType {

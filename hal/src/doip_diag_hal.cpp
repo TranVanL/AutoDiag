@@ -52,6 +52,16 @@ void DoipDiagnosticHal::reset() {
     isReady_ = connect();
 }
 
+void DoipDiagnosticHal::flashFirmware(const uint8_t* data, size_t len) {
+    // TODO: real implementation using UDS 0x34/0x36/0x37 transfer services
+    (void)data;
+    (void)len;
+#ifdef __ANDROID__
+    __android_log_print(ANDROID_LOG_DEBUG, "DoIP.HAL",
+                        "flashFirmware: received %zu bytes (stub)", len);
+#endif
+}
+
 DoipDiagnosticHal::Result DoipDiagnosticHal::SendAndReceive(const std::vector<uint8_t> &req) {
     if (req.empty()) {
         return {false, {}, "Request is empty!"};

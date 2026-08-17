@@ -119,6 +119,12 @@ public final class DiagClient implements AutoCloseable {
             final DiagProperty property = inFlight.remove(requestId);
             dispatchError(property, errorCode, errorMsg, requestId);
         }
+
+        @Override
+        public void onProgress(long bytesWritten, long totalBytes) {
+            // Progress is only used for firmware flash; SDK consumers can ignore.
+            Log.d(TAG, "onProgress: " + bytesWritten + "/" + totalBytes);
+        }
     };
 
     // Create new connection to connect Service

@@ -2,6 +2,11 @@
 #include <android/log.h>
 #include <memory>
 #include <string>
+#include <algorithm>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include "jni_callback.h"
 #include "diag_engine.h"
 #include "diag_type.h"
@@ -214,4 +219,73 @@ Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__II(
                         "nativeReadProperty: propId=0x%X areaId=%d → \"%s\"",
                         propId, areaId, out.c_str());
     return env->NewStringUTF(out.c_str());
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_vdiag_service_DiagHalBridge_nativeFlashFirmware(
+    JNIEnv* env, jclass, jint fd, jobject callback) {
+    if (fd < 0) {
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: invalid fd");
+        return;
+    }
+
+    if (callback == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: null callback");
+        return;
+    }
+
+    auto bridge = std::make_shared<JniCallbackBridge>(env, callback);
+
+    if (g_engine == nullptr || g_engine->getHal() == nullptr) {
+        bridge->onError(-1, -1, "Engine not initialized");
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: engine not ready");
+        return;
+    }
+
+    // Get file size from the passed fd
+    struct stat st;
+    if (fstat(fd, &st) != 0) {
+        bridge->onError(-1, -1, "Failed to get file size");
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: fstat failed");
+        return;
+    }
+
+    const size_t fileSize = static_cast<size_t>(st.st_size);
+    if (fileSize == 0) {
+        bridge->onError(-1, -1, "File size is zero");
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: file size is zero");
+        return;
+    }
+
+    __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
+                        "nativeFlashFirmware: fd=%d size=%zu", fd, fileSize);
+
+    // mmap the entire file — zero-copy, no Java byte[] copy
+    void* mappedData = mmap(nullptr, fileSize, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (mappedData == MAP_FAILED) {
+        bridge->onError(-1, -1, "Failed to mmap file");
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: mmap failed");
+        return;
+    }
+
+    // Flash in chunks so we can report progress and avoid blocking too long
+    constexpr size_t chunkSize = 256 * 1024; // 256 KB
+    const uint8_t* dataPtr = static_cast<const uint8_t*>(mappedData);
+    size_t bytesWritten = 0;
+
+    while (bytesWritten < fileSize) {
+        size_t bytesToWrite = std::min(chunkSize, fileSize - bytesWritten);
+        g_engine->getHal()->flashFirmware(dataPtr + bytesWritten, bytesToWrite);
+        bytesWritten += bytesToWrite;
+        bridge->onProgress(static_cast<int64_t>(bytesWritten),
+                           static_cast<int64_t>(fileSize));
+    }
+
+    if (munmap(mappedData, fileSize) != 0) {
+        __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeFlashFirmware: munmap failed");
+    }
+
+    __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
+                        "nativeFlashFirmware: completed %zu bytes", fileSize);
 }

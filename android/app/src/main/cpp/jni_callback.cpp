@@ -5,6 +5,7 @@
 extern JavaVM* g_jvm;
 extern jmethodID g_onResultId;
 extern jmethodID g_onErrorId;
+extern jmethodID g_onProgressId;
 
 namespace {
     constexpr const char* TAG = "VDiag.JNI";
@@ -168,3 +169,29 @@ JNIEnv* JniCallbackBridge::getEnv() {
     __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: GetEnv failed");
     return nullptr;
     }
+
+void JniCallbackBridge::onProgress(int64_t bytesWritten, int64_t totalBytes) {
+    if (m_callback == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: callback is null");
+        return;
+    }
+
+    JNIEnv* env = getEnv();
+    if (env == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: Env is null");
+        return;
+    }
+
+    if (g_onProgressId == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JniCallbackBridge: g_onProgressId is null");
+        return;
+    }
+
+    // Use JNI* env to call from native to Java with object callback , method , and arguments
+    env->CallVoidMethod(m_callback, g_onProgressId, static_cast<jlong>(bytesWritten), static_cast<jlong>(totalBytes));
+    if (env->ExceptionCheck()) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "onProgress: exception from callback");
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+    }
+}

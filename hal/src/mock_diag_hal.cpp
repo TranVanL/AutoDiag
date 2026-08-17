@@ -102,12 +102,18 @@ void MockDiagnosticHal::initDTCData(){
 
 void MockDiagnosticHal::reset()  {
     is_ready = true;
+    flashBytes_ = 0;
     initDIDDb();
     initDTCData();
 }
 
 bool MockDiagnosticHal::isReady() const {
     return is_ready;
+}
+
+void MockDiagnosticHal::flashFirmware(const uint8_t* data, size_t len) {
+    if (data == nullptr || len == 0) return;
+    flashBytes_ += len;
 }
 
 IDiagnosticHal::Result MockDiagnosticHal::readProperty(uint32_t propId, uint32_t areaId) {

@@ -6,6 +6,7 @@ JavaVM* g_jvm = nullptr;
 jclass g_callbackClass = nullptr;
 jmethodID g_onResultId = nullptr;
 jmethodID g_onErrorId = nullptr;
+jmethodID g_onProgressId = nullptr;
 
 namespace {
     constexpr const char* TAG = "VDiag.JNI";
@@ -45,6 +46,12 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     g_onErrorId = env->GetMethodID(g_callbackClass, "onError", "(IILjava/lang/String;)V");
     if (g_onErrorId == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: GetMethodID(onError) failed");
+        return -1;
+    }
+
+    g_onProgressId = env->GetMethodID(g_callbackClass, "onProgress", "(JJ)V");
+    if (g_onProgressId == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "JNI_OnLoad: GetMethodID(onProgress) failed");
         return -1;
     }
 

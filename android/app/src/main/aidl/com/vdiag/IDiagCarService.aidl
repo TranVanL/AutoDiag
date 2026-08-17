@@ -5,6 +5,7 @@ import com.vdiag.IDiagCallback;
 
 import com.vdiag.IDiagPropertyListener;
 import com.vdiag.DiagPropertyEvent;
+import android.os.ParcelFileDescriptor;
 
 // Expose contract that service offer to client
 interface IDiagCarService {
@@ -18,4 +19,5 @@ interface IDiagCarService {
                                   in IDiagPropertyListener listener);
     void unsubscribePropertyForArea(int proId, int areaId,
                                     in IDiagPropertyListener listener);
+    void flashFirmware(in ParcelFileDescriptor fd , IDiagCallback callback);
 }

@@ -19,6 +19,7 @@ public:
 
     void onResult(int requestId, const std::string& value, int64_t latencyUs);
     void onError(int requestId, int errorCode, const std::string& errorMsg);
+    void onProgress(int64_t bytesWritten, int64_t totalBytes);
 
 private :
     jobject m_callback;

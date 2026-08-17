@@ -1,6 +1,7 @@
 package com.vdiag.service;
 
 import android.os.Binder;
+import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.Log;
 
@@ -10,6 +11,8 @@ import com.vdiag.DiagRequest;
 
 import com.vdiag.DiagPropertyEvent;
 import com.vdiag.IDiagPropertyListener;
+
+import java.io.IOException;
 
 // Implement Inheritance Stub class to handle communication between client and service
 public class DiagCarServiceBinder extends IDiagCarService.Stub {
@@ -111,6 +114,44 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
             } catch (RemoteException re) {
                 Log.e(TAG, "Failed to notify callback about JNI error", re);
             }
+        }
+    }
+
+    @Override
+    public void flashFirmware(ParcelFileDescriptor fd ,  IDiagCallback callback ) {
+        PermissionGate.enforce(mService);
+
+        if (fd == null || callback == null) {
+            Log.e(TAG, "Invalid parameters for FlashFirmware");
+            return;
+        }
+
+        int callerPid = Binder.getCallingPid();
+        int callerUid = Binder.getCallingUid();
+        Log.i(TAG, "flashFirmware() caller pid=" + callerPid + " uid=" + callerUid);
+
+       try {
+          DiagHalBridge.flashFirmware(fd.getFd(), callback);
+       } catch (UnsatisfiedLinkError e) {
+         Log.e(TAG, "JNI bridge unavailable for flashFirmware", e);
+          notifyError(callback, -1, "JNI bridge unavailable");
+       } catch (Exception e) {
+         Log.e(TAG, "flashFirmware failed", e);
+         notifyError(callback, -1, e.getMessage());
+        } finally {
+        try {
+            fd.close();  
+        } catch (IOException e) {
+            Log.w(TAG, "failed to close fd", e);
+        }
+        }
+    }
+
+    private void notifyError(IDiagCallback callback, int errorCode, String errorMessage) {
+        try {
+            callback.onError(-1, errorCode, errorMessage);
+        } catch (RemoteException e) {
+            Log.e(TAG, "Failed to notify callback about error", e);
         }
     }
 

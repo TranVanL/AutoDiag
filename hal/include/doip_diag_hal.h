@@ -16,6 +16,7 @@ public:
     IDiagnosticHal::Result readProperty(uint32_t propId, uint32_t areaId) override;
     bool isReady() const override;
     void reset() override;
+    void flashFirmware(const uint8_t* data, size_t len) override;
 
 private:
     bool connect();

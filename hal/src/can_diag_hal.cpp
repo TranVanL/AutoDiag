@@ -84,6 +84,12 @@ void CanDiagnosticHal::reset() {
     open();
 }
 
+void CanDiagnosticHal::flashFirmware(const uint8_t* data, size_t len) {
+    // TODO: real implementation using ISO-TP transfer services
+    (void)data;
+    (void)len;
+}
+
 IDiagnosticHal::Result CanDiagnosticHal::SendAndReceive(const std::vector<uint8_t>& req) {
     if (sockFd_ < 0 && !open()) {
         return IDiagnosticHal::Result{false, {}, "Socket not open"};

@@ -12,3 +12,4 @@ parcelable DiagPropertyEvent {
     String stringValue;
     String errorMessage;      // populated only when status=ERROR
 }
+ 

@@ -111,4 +111,20 @@ public class DiagHalBridge {
             return null;
         }
     }
+
+    public static native void nativeFlashFirmware(int fd, IDiagCallback callback);
+
+    public static boolean flashFirmware(int fd, IDiagCallback callback) {
+        if (!sNativeReady) {
+            Log.e(TAG, "flashFirmware skipped: JNI library not loaded");
+            return false;
+        }
+        try {
+            nativeFlashFirmware(fd, callback);
+            return true;
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeFlashFirmware failed", e);
+            return false;
+        }
+    }
 }

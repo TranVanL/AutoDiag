@@ -15,6 +15,7 @@ public:
     IDiagnosticHal::Result readProperty(uint32_t propId, uint32_t areaId) override;
     bool isReady() const override;
     void reset() override;
+    void flashFirmware(const uint8_t* data, size_t len) override;
 private: 
     void initDIDDb();
     void initDTCData();
@@ -22,6 +23,7 @@ private:
     bool is_ready{true};
     std::unordered_map<uint16_t, std::vector<uint8_t>> DID_db{};
     std::vector<uint8_t> DTC_payload{};
+    size_t flashBytes_{0};
 
 };
 
