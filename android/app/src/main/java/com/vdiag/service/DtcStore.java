@@ -1,4 +1,5 @@
 package com.vdiag.service;
+
 import androidx.annotation.NonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -11,7 +12,10 @@ public class DtcStore {
 
     private final List<String> mDtcList = new ArrayList<>();
 
-    public synchronized void add (@NonNull String dtc) {
+    public synchronized void add(@NonNull String dtc) {
+        if (dtc == null) {
+            throw new IllegalArgumentException("dtc must not be null");
+        }
         mDtcList.add(dtc);
     }
 
@@ -24,15 +28,15 @@ public class DtcStore {
     }
 
     @NonNull
-    public synchronized byte[] serialAll() {
+    public synchronized byte[] serializeAll() {
         if (mDtcList.isEmpty()) {
             return new byte[0];
         }
-        String joined  = String.join(SEPARATOR , mDtcList);
+        String joined = String.join(SEPARATOR, mDtcList);
         return joined.getBytes(StandardCharsets.UTF_8);
     }
 
-    public synchronized void DemoData(){
+    public synchronized void seedDemoData() {
         mDtcList.clear();
         mDtcList.add("P0101: Mass Air Flow Circuit Range/Performance");
         mDtcList.add("P0300: Random/Multiple Cylinder Misfire Detected");

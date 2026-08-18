@@ -32,7 +32,7 @@ public class DiagCarService extends Service {
         }
 
         mDtcStore = new DtcStore();
-        mDtcStore.DemoData();
+        mDtcStore.seedDemoData();
         // Init members
         // 2. Binder-layer infrastructure.
         mClientRegistry = new ClientRegistry();

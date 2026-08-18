@@ -54,6 +54,8 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
 
     private Button mClearDtc;
 
+    private Button mGetDtcSnapshot;
+
     private ResultAdapter mResultAdapter;
 
     private DiagClient.SubscriptionToken mSocToken;
@@ -84,6 +86,7 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         mGetRPM = findViewById(R.id.btn_get_rpm);
         mGetDtcList = findViewById(R.id.btn_get_dtc_list);
         mClearDtc = findViewById(R.id.btn_clear_dtc);
+        mGetDtcSnapshot = findViewById(R.id.btn_get_dtc_snapshot);
         RecyclerView resultsList = findViewById(R.id.results_list);
 
         mResultAdapter = new ResultAdapter();
@@ -97,8 +100,9 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         mGetSwVersionButton.setOnClickListener(v -> requestProperty(DiagProperty.SW_VERSION));
         mGetSOC.setOnClickListener(view -> requestProperty(DiagProperty.BATTERY_SOC));
         mGetRPM.setOnClickListener(view -> requestProperty(DiagProperty.RPM));
-        mGetDtcList.setOnClickListener(view -> requestProperty(DiagProperty.DTC_LIST));
-        mClearDtc.setOnClickListener(view -> requestProperty(DiagProperty.DTC_CLEAR));
+        mGetDtcList.setOnClickListener(v -> requestProperty(DiagProperty.DTC_LIST));
+        mClearDtc.setOnClickListener(v -> requestProperty(DiagProperty.DTC_CLEAR));
+        mGetDtcSnapshot.setOnClickListener(v -> requestDtcSnapshot());
 
         mDiagClient = DiagClient.create(this);
         mDiagClient.setListener(this);
@@ -261,6 +265,7 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
         mGetRPM.setEnabled(enabled);
         mGetDtcList.setEnabled(enabled);
         mClearDtc.setEnabled(enabled);
+        mGetDtcSnapshot.setEnabled(enabled);
     }
 
     private void setStatusConnected(String message) {
@@ -279,5 +284,27 @@ public class MainActivity extends AppCompatActivity implements DiagListener {
     private void setStatusConnecting(String message) {
         mStatusText.setText(message);
         mStatusDot.setBackgroundTintList(getColorStateList(R.color.diag_warning));
+    }
+
+    private void requestDtcSnapshot() {
+        if (mDiagClient == null) {
+            Log.w(TAG, "DiagClient is null");
+            return;
+        }
+        if (!mDiagClient.isConnected()) {
+            setStatusConnecting();
+            return;
+        }
+
+        new Thread(() -> {
+            String snapshot = mDiagClient.getDtcSnapshotShared();
+            runOnUiThread(() -> {
+                if (snapshot != null) {
+                    appendResult("DTC Snapshot (ASHMEM)", snapshot, -1L);
+                } else {
+                    appendResult("DTC Snapshot (ASHMEM)", "Failed to load", -1L);
+                }
+            });
+        }).start();
     }
 }

@@ -1,31 +1,33 @@
 package com.vdiag.ipc;
 
 import android.os.ParcelFileDescriptor;
+import android.system.ErrnoException;
+import android.system.Os;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.io.FileDescriptor;
 import java.io.IOException;
 
 public final class AshmemBridge {
     private static final String TAG = "VDiag.AshmemBridge";
-    private static final int PROT_READ = 0x1;
-    private static final int PROT_WRITE = 0x2;
+
+    public static final int PROT_READ = 0x1;
+    public static final int PROT_WRITE = 0x2;
 
     static {
         try {
             System.loadLibrary("vdiag_jni");
-            Log.i(TAG, "Load library successfully");
+            Log.i(TAG, "Native library 'vdiag_jni' loaded");
         } catch (UnsatisfiedLinkError e) {
-            Log.e(TAG, "Failed to load library");
-            throw (e);
+            Log.e(TAG, "Failed to load native library 'vdiag_jni'", e);
+            throw e;
         }
     }
 
     private AshmemBridge() {
-
+        // utility class
     }
 
     public static native int nativeCreate(@Nullable String name, int size) throws IOException;
@@ -37,14 +39,15 @@ public final class AshmemBridge {
     public static native int nativeGetSize(int fd) throws IOException;
 
     @NonNull
-    public static ParcelFileDescriptor createSharedBlob(@Nullable String name, @NonNull byte[] data) throws IOException {
+    public static ParcelFileDescriptor createSharedBlob(@Nullable String name,
+                                                        @NonNull byte[] data) throws IOException {
         if (data == null) {
-            throw new IllegalArgumentException("data is null");
+            throw new IllegalArgumentException("data must not be null");
         }
 
         int fd = nativeCreate(name, data.length);
         if (fd < 0) {
-            throw new IOException("Error from creating shared memory");
+            throw new IOException("Failed to create shared memory");
         }
 
         try {
@@ -59,8 +62,8 @@ public final class AshmemBridge {
 
     private static void closeFd(int fd) {
         try {
-            ParcelFileDescriptor.adoptFd(fd).close();
-        } catch (IOException e) {
+            Os.close(fd);
+        } catch (ErrnoException e) {
             Log.w(TAG, "Failed to close fd", e);
         }
     }

@@ -36,23 +36,30 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     public ParcelFileDescriptor getDtcSnapshotShared(int[] outMeta) {
         PermissionGate.enforce(mService);
         if (outMeta == null || outMeta.length < 2) {
-            Log.e(TAG ,"Invalid parameters for getDtcSnapshotShared");
-            throw new IllegalArgumentException("Invalid parameters for getDtcSnapshotShared");
+            Log.e(TAG, "getDtcSnapshotShared: outMeta must have length >= 2");
+            throw new IllegalArgumentException("outMeta must have length >= 2");
         }
+
         int callerPid = Binder.getCallingPid();
         int callerUid = Binder.getCallingUid();
-        Log.i(TAG, "getDtcSnapshotShared() caller pid=" + callerPid + " uid=" + callerUid);
+        Log.i(TAG, "getDtcSnapshotShared() caller pid=" + callerPid
+                + " uid=" + callerUid);
 
         try {
-            byte[] dtcSnapshot = mDtcStore.serialAll();
-            ParcelFileDescriptor pfd = AshmemBridge.createSharedBlob("VdiagDtcSnapshot", dtcSnapshot);
+            byte[] dtcSnapshot = mDtcStore.serializeAll();
+            ParcelFileDescriptor pfd = AshmemBridge.createSharedBlob(
+                    "vdiag_dtc_snapshot", dtcSnapshot);
+
             outMeta[0] = dtcSnapshot.length;
             outMeta[1] = mDtcStore.count();
-            Log.i(TAG , "getDtcSnapshotShared() returned fd=" + pfd.getFd() + "" + " size=" + dtcSnapshot.length);
-            return pfd;
 
+            Log.i(TAG, "getDtcSnapshotShared: returned fd=" + pfd.getFd()
+                    + " size=" + dtcSnapshot.length
+                    + " count=" + outMeta[1]);
+            return pfd;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            Log.e(TAG, "getDtcSnapshotShared failed", e);
+            return null;
         }
     }
 

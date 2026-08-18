@@ -398,4 +398,50 @@ public final class DiagClient implements AutoCloseable {
         }
         mainHandler.post(() -> currentConnectionListener.onConnectionChanged(connected, message));
     }
+
+    /**
+     * Lấy DTC snapshot qua ASharedMemory — zero-copy bulk transfer.
+     *
+     * @return Chuỗi DTC nếu thành công, null nếu lỗi.
+     */
+    public String getDtcSnapshotShared() {
+        final IDiagCarService service = diagService;
+        if (closed.get() || service == null) {
+            dispatchError(null, ERR_NOT_CONNECTED, "service is not connected", -1);
+            return null;
+        }
+
+        try {
+            int[] meta = new int[2]; // [0]=size bytes, [1]=record count
+            ParcelFileDescriptor pfd = service.getDtcSnapshotShared(meta);
+            if (pfd == null) {
+                dispatchError(null, ERR_REMOTE_EXCEPTION,
+                        "service returned null PFD", -1);
+                return null;
+            }
+
+            try (FileInputStream fis = new FileInputStream(pfd.getFileDescriptor());
+                 FileChannel channel = fis.getChannel()) {
+
+                MappedByteBuffer buffer = channel.map(
+                        FileChannel.MapMode.READ_ONLY, 0, meta[0]);
+
+                byte[] bytes = new byte[meta[0]];
+                buffer.get(bytes);
+                return new String(bytes, StandardCharsets.UTF_8);
+            } finally {
+                pfd.close();
+            }
+        } catch (RemoteException e) {
+            Log.e(TAG, "getDtcSnapshotShared failed", e);
+            dispatchError(null, ERR_REMOTE_EXCEPTION,
+                    "getDtcSnapshotShared failed: " + e.getMessage(), -1);
+            return null;
+        } catch (IOException e) {
+            Log.e(TAG, "getDtcSnapshotShared I/O failed", e);
+            dispatchError(null, ERR_REMOTE_EXCEPTION,
+                    "getDtcSnapshotShared I/O failed: " + e.getMessage(), -1);
+            return null;
+        }
+    }
 }
