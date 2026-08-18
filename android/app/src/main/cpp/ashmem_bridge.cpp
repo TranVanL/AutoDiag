@@ -73,9 +73,8 @@ Java_com_vdiag_ipc_AshmemBridge_nativeWriteBlob(JNIEnv *env, jclass, jint fd, jb
         return;
     }
 
-    size_t regionSize = 0;
-    int sizeResult = ASharedMemory_getSize(fd, &regionSize);
-    if (sizeResult != 0 || regionSize < static_cast<size_t>(len)) {
+    size_t regionSize = ASharedMemory_getSize(fd);
+    if (regionSize < static_cast<size_t>(len)) {
         throwIllegalArgumentException(env, "data length exceeds shared memory size");
         return;
     }
@@ -126,12 +125,10 @@ Java_com_vdiag_ipc_AshmemBridge_nativeGetSize(JNIEnv *env, jclass, jint fd) {
         throwIllegalArgumentException(env, "fd must be >= 0");
         return -1;
     }
-    size_t size = 0;
-    int result = ASharedMemory_getSize(fd, &size);
-    if (result != 0) {
+    size_t size = ASharedMemory_getSize(fd);
+    if (size == 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG,
-                            "ASharedMemory_getSize failed: errno=%d (%s)",
-                            errno, strerror(errno));
+                            "ASharedMemory_getSize returned 0 for fd=%d", fd);
         throwIOException(env, "Failed to get shared memory size");
         return -1;
     }
