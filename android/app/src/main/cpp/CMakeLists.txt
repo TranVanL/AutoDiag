@@ -5,6 +5,7 @@ add_library(vdiag_jni SHARED
         jni_onload.cpp
         jni_bridge.cpp
         jni_callback.cpp
+        ashmem_bridge.cpp
 )
 
 set(AUTODIAG_HAL_BUILD_TESTS OFF CACHE BOOL "Disable HAL tests for Android build" FORCE)

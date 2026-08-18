@@ -20,4 +20,5 @@ interface IDiagCarService {
     void unsubscribePropertyForArea(int proId, int areaId,
                                     in IDiagPropertyListener listener);
     void flashFirmware(in ParcelFileDescriptor fd , IDiagCallback callback);
+    ParcelFileDescriptor getDtcSnapshotShared(out int[] outMeta);
 }

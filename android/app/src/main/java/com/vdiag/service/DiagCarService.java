@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.IBinder;
 import android.util.Log;
 
+
 public class DiagCarService extends Service {
 
     private static final String TAG = "DiagCarService";
@@ -18,6 +19,8 @@ public class DiagCarService extends Service {
    // System Lifecycle client with 3 seconds watchdog and lifecycle follow state machine (Follow PowerManagerService pattern)
     private ISystemLifecycle mSystemClient;
 
+    private DtcStore mDtcStore;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -28,12 +31,14 @@ public class DiagCarService extends Service {
             Log.e(TAG, "JNI init failed — service runs in degraded mode");
         }
 
+        mDtcStore = new DtcStore();
+        mDtcStore.DemoData();
         // Init members
         // 2. Binder-layer infrastructure.
         mClientRegistry = new ClientRegistry();
         mSubManager     = new SubscriptionManager(
             (SubscriptionManager.AreaPropertyPoller) DiagHalBridge::readProperty);
-        mBinder         = new DiagCarServiceBinder(this, mClientRegistry, mSubManager);
+        mBinder         = new DiagCarServiceBinder(this, mClientRegistry, mSubManager, mDtcStore);
         Log.i(TAG, "DiagCarService Binder created");
 
         mSystemClient = createSystemClient();

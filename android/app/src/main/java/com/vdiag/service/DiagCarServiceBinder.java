@@ -13,6 +13,7 @@ import com.vdiag.DiagPropertyEvent;
 import com.vdiag.IDiagPropertyListener;
 
 import java.io.IOException;
+import com.vdiag.ipc.AshmemBridge;
 
 // Implement Inheritance Stub class to handle communication between client and service
 public class DiagCarServiceBinder extends IDiagCarService.Stub {
@@ -21,14 +22,39 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
     private final DiagCarService mService;
     private final ClientRegistry mClientRegistry;
     private final SubscriptionManager mSubManager;
+    private final DtcStore mDtcStore;
 
     public DiagCarServiceBinder(DiagCarService service, ClientRegistry clientRegistry,
-                                SubscriptionManager subManager) {
+                                SubscriptionManager subManager , DtcStore dtcStore) {
         mService = service;
         mClientRegistry = clientRegistry;
         mSubManager = subManager;
+        mDtcStore = dtcStore;
     }
 
+    @Override
+    public ParcelFileDescriptor getDtcSnapshotShared(int[] outMeta) {
+        PermissionGate.enforce(mService);
+        if (outMeta == null || outMeta.length < 2) {
+            Log.e(TAG ,"Invalid parameters for getDtcSnapshotShared");
+            throw new IllegalArgumentException("Invalid parameters for getDtcSnapshotShared");
+        }
+        int callerPid = Binder.getCallingPid();
+        int callerUid = Binder.getCallingUid();
+        Log.i(TAG, "getDtcSnapshotShared() caller pid=" + callerPid + " uid=" + callerUid);
+
+        try {
+            byte[] dtcSnapshot = mDtcStore.serialAll();
+            ParcelFileDescriptor pfd = AshmemBridge.createSharedBlob("VdiagDtcSnapshot", dtcSnapshot);
+            outMeta[0] = dtcSnapshot.length;
+            outMeta[1] = mDtcStore.count();
+            Log.i(TAG , "getDtcSnapshotShared() returned fd=" + pfd.getFd() + "" + " size=" + dtcSnapshot.length);
+            return pfd;
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     // Function that service expose in AIDL for client call through Binder IPC
     @Override
