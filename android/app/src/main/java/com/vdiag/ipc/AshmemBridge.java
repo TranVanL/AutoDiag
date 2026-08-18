@@ -1,8 +1,6 @@
 package com.vdiag.ipc;
 
 import android.os.ParcelFileDescriptor;
-import android.system.ErrnoException;
-import android.system.Os;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -62,8 +60,8 @@ public final class AshmemBridge {
 
     private static void closeFd(int fd) {
         try {
-            Os.close(fd);
-        } catch (ErrnoException e) {
+            ParcelFileDescriptor.adoptFd(fd).close();
+        } catch (IOException e) {
             Log.w(TAG, "Failed to close fd", e);
         }
     }

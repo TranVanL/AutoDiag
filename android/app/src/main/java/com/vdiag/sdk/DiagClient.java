@@ -16,6 +16,11 @@ import com.vdiag.IDiagCarService;
 import com.vdiag.DiagPropertyEvent;
 import com.vdiag.IDiagPropertyListener;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -399,11 +404,7 @@ public final class DiagClient implements AutoCloseable {
         mainHandler.post(() -> currentConnectionListener.onConnectionChanged(connected, message));
     }
 
-    /**
-     * Lấy DTC snapshot qua ASharedMemory — zero-copy bulk transfer.
-     *
-     * @return Chuỗi DTC nếu thành công, null nếu lỗi.
-     */
+    
     public String getDtcSnapshotShared() {
         final IDiagCarService service = diagService;
         if (closed.get() || service == null) {
