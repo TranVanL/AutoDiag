@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <android/log.h>
+#include <android/trace.h>
 #include <memory>
 #include <string>
 #include <algorithm>
@@ -14,6 +15,22 @@
 
 #define JNI_TAG "VDiag.JNI"
 
+#ifndef ENABLE_ATRACE
+#define ENABLE_ATRACE 1
+#endif
+
+#if ENABLE_ATRACE
+#define ATRACE_NAME(name) ATrace_beginSection(name)
+#define ATRACE_END()      ATrace_endSection()
+#define ATRACE_COUNTER(name,value) ATrace_setCount(name , static_cast<uint64_t>(value))
+#else
+#define ATRACE_NAME(name) ((void)0)
+#define ATRACE_END()      ((void)0)
+#define ATRACE_COUNTER(name,value) ((void)0)
+#endif
+
+
+
 static std::unique_ptr<autodiag::DiagEngine> g_engine;
 // Declare JNI function call to native
 extern "C"
@@ -21,9 +38,11 @@ JNIEXPORT void JNICALL
 Java_com_vdiag_service_DiagHalBridge_nativeInit(
         JNIEnv* env, jclass, jstring halType) {
 
+    ATRACE_NAME("JNI:nativeInit");
     const char* nativeHalType = env->GetStringUTFChars(halType, nullptr);
     if (nativeHalType == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, JNI_TAG, "nativeInit: halType is null");
+        ATRACE_END();
         return;
     }
     const std::string halTypeStr(nativeHalType);
@@ -32,6 +51,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
     if (g_engine != nullptr) {
         __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
                             "nativeInit: engine already running, skipping re-init");
+        ATRACE_END();
         return;
     }
 
@@ -46,6 +66,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
     } catch (const std::exception& ex) {
         __android_log_print(ANDROID_LOG_ERROR, JNI_TAG,
                             "nativeInit: failed to create HAL: %s", ex.what());
+        ATRACE_END();
         return;
     }
     // Create DiagEngine with HAL
@@ -54,6 +75,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeInit(
 
     __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
                         "nativeInit: DiagEngine started — worker thread alive");
+    ATRACE_END();
 }
 
 extern "C"
@@ -61,9 +83,11 @@ JNIEXPORT void JNICALL
 Java_com_vdiag_service_DiagHalBridge_nativeShutdown(
         JNIEnv*, jclass) {
 
+    ATRACE_NAME("JNI:nativeShutdown");
     if (g_engine == nullptr) {
         __android_log_print(ANDROID_LOG_WARN, JNI_TAG,
                             "nativeShutdown: engine is null, nothing to do");
+        ATRACE_END();
         return;
     }
 
@@ -71,11 +95,13 @@ Java_com_vdiag_service_DiagHalBridge_nativeShutdown(
     g_engine->shutdown();
     g_engine.reset();
     __android_log_print(ANDROID_LOG_INFO, JNI_TAG, "nativeShutdown: DiagEngine destroyed");
+    ATRACE_END();
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint requestId, jint propertyID, jbyteArray payload, jobject callback) {
+    ATRACE_NAME("JNI:nativeGetProperty");
     (void)payload;
     __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
                         "nativeGetProperty: reqId=%d, propId=0x%X", requestId, propertyID);
@@ -83,6 +109,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
     if (callback == nullptr) {
         __android_log_print(ANDROID_LOG_ERROR, JNI_TAG,
                             "nativeGetProperty: callback is null");
+        ATRACE_END();
         return;
     }
 
@@ -94,6 +121,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
         bridge->onError(static_cast<int>(requestId),
                         static_cast<int>(autodiag::Nrc::EngineNotReady),
                         "Engine not initialized");
+        ATRACE_END();
         return;
     }
 
@@ -115,8 +143,13 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
         req.dataId  = propId;
         pri = autodiag::RequestPriority::HIGH;
     }
+
+    const int32_t traceCookie = static_cast<int32_t>(req.requestId);
     // Push to engine diag request
-    const bool queued = g_engine->submit(pri,req, [bridge](const autodiag::DiagResponse& r) {
+    const bool queued = g_engine->submit(pri,req, [bridge,traceCookie](const autodiag::DiagResponse& r) {
+        // Check time callback run on worker thread
+        ATRACE_NAME("JNI:Dispatch callback from DiagEngine");
+        ATrace_beginAsyncSection("JNI:AsyncRequest" , traceCookie);
         if (r.positive) {
             bridge->onResult(r.requestId, r.valueString, r.latencyUs);
         } else {
@@ -124,8 +157,12 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
                             static_cast<int>(r.nrc),
                             autodiag::nrcToString(r.nrc));
         }
+        ATrace_endAsyncSection("JNI:AsyncRequest" , traceCookie);
+        ATRACE_END();
     });
 
+    // Check queue depth
+    ATrace_setCounter("JNI:DiagEngine/QueueDepth" , g_engine->getQueueDepth());
     if (queued) {
         __android_log_print(ANDROID_LOG_INFO, JNI_TAG,
                             "nativeGetProperty: submitted to DiagEngine — reqId=%d propId=0x%X",
@@ -138,6 +175,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeGetProperty(JNIEnv* env, jclass, jint
                         static_cast<int>(autodiag::Nrc::EngineNotReady),
                         "Engine rejected request");
     }
+    ATRACE_END();
 }
 
 
