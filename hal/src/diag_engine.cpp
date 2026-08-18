@@ -127,6 +127,13 @@ void DiagEngine::workerLoop() {
         const auto t1 = std::chrono::steady_clock::now();
         response.latencyUs = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
+        // Cout the latency for debugging purposes
+        std::cout << "[trace] DiagEngine::processRequest" 
+                  << " requestId=" << response.requestId
+                  << " latencyUs=" << response.latencyUs
+                  << " QueueDepth=" << queueDepth_.load()
+                  << "\n";
+
         try {
             cb(response);
         } catch (const std::exception& ex) {

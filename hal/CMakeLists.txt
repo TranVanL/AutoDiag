@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(AUTODIAG_HAL_BUILD_TESTS "Build HAL host tests" ON)
 
 find_package(Threads REQUIRED)
+find_library(log-lib log)
+find_library(android-lib android)
+
 
 add_library(vdiag_hal STATIC
     src/dummy.cpp
@@ -19,9 +22,9 @@ add_library(vdiag_hal STATIC
 target_include_directories(vdiag_hal PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries(vdiag_hal PUBLIC Threads::Threads)
+target_link_libraries(vdiag_hal PUBLIC Threads::Threads ${log-lib} ${android-lib})
 if (WIN32)
-    target_link_libraries(vdiag_hal PUBLIC ws2_32)
+    target_link_libraries(vdiag_hal PUBLIC ws2_32 ${log-lib} ${android-lib})
 endif()
 
 if (AUTODIAG_HAL_BUILD_TESTS AND NOT ANDROID)
