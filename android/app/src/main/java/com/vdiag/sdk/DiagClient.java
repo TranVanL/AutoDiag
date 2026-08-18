@@ -19,8 +19,6 @@ import com.vdiag.IDiagPropertyListener;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
@@ -417,20 +415,23 @@ public final class DiagClient implements AutoCloseable {
             int[] meta = new int[2]; // [0]=size bytes, [1]=record count
             ParcelFileDescriptor pfd = service.getDtcSnapshotShared(meta);
             if (pfd == null) {
+                if (meta[0] == 0) {
+                    return ""; // Empty snapshot
+                }
                 dispatchError(null, ERR_REMOTE_EXCEPTION,
                         "service returned null PFD", -1);
                 return null;
             }
 
-            try (FileInputStream fis = new FileInputStream(pfd.getFileDescriptor());
-                 FileChannel channel = fis.getChannel()) {
-
-                MappedByteBuffer buffer = channel.map(
-                        FileChannel.MapMode.READ_ONLY, 0, meta[0]);
-
+            try (FileInputStream fis = new FileInputStream(pfd.getFileDescriptor())) {
                 byte[] bytes = new byte[meta[0]];
-                buffer.get(bytes);
-                return new String(bytes, StandardCharsets.UTF_8);
+                int totalRead = 0;
+                while (totalRead < meta[0]) {
+                    int r = fis.read(bytes, totalRead, meta[0] - totalRead);
+                    if (r <= 0) break;
+                    totalRead += r;
+                }
+                return new String(bytes, 0, totalRead, StandardCharsets.UTF_8);
             } finally {
                 pfd.close();
             }

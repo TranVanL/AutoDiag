@@ -47,6 +47,13 @@ public class DiagCarServiceBinder extends IDiagCarService.Stub {
 
         try {
             byte[] dtcSnapshot = mDtcStore.serializeAll();
+            if (dtcSnapshot.length == 0) {
+                outMeta[0] = 0;
+                outMeta[1] = 0;
+                Log.i(TAG, "getDtcSnapshotShared: store is empty");
+                return null;
+            }
+
             ParcelFileDescriptor pfd = AshmemBridge.createSharedBlob(
                     "vdiag_dtc_snapshot", dtcSnapshot);
 
