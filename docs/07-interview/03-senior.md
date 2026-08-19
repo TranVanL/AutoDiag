@@ -3,7 +3,7 @@
 > **Scope:** Advanced IPC (ASharedMemory / dumpsys / BinderStats / transaction ring) · Testing pyramid (JUnit / Mockito / Robolectric / Espresso / Jacoco) · MVVM + Room + LiveData + Repository · Background work (WorkManager / BroadcastReceiver / DataStore) · Security (Keystore / NetworkSecurityConfig / StrictMode / R8).
 > **Level target:** Senior Android Common — these prove you build apps that are **testable, rotation-safe, observable, and secure**, not just functional.
 
-Index: [Hub](03_INTERVIEW_PREP.md) · [A: Foundation](03a_INTERVIEW_FOUNDATION.md) · [B: Framework](03b_INTERVIEW_FRAMEWORK.md) · **C: Senior** · [D: Behavioral](03d_INTERVIEW_BEHAVIORAL.md)
+Index: [Hub](00_INTERVIEW_HUB.md) · [A: Foundation](01_FOUNDATION.md) · [B: Framework](02_FRAMEWORK.md) · **C: Senior** · [D: Behavioral](04_BEHAVIORAL.md)
 
 ---
 
@@ -359,4 +359,247 @@ The manifest permission justification, the NetworkSecurityConfig (cleartext off 
 
 ---
 
-*Continue → [Part D: Behavioral, System Design & Demo](03d_INTERVIEW_BEHAVIORAL.md)*
+## 🧩 SECTION C6 — Advanced System Design & Production Hardening (Q21–Q40)
+
+### Q21. How do you design for graceful degradation when HAL is down?
+
+**Short:** Fail fast, don't hang. New requests return `ERR_HAL_DOWN` immediately. Subscribers receive `onErrorEvent` so the UI can show a degraded state. The engine queue drains already-submitted work with cancelled callbacks. A watchdog/health probe keeps the service itself alive so it can reconnect when HAL returns.
+
+**Deep dive:** The key is separating *liveness* (service responds) from *correctness* (HAL works). A naive design blocks Binder threads waiting for HAL → pool saturation → the service itself looks dead. VDiag's `mHalUp` atomic is checked on every inbound call; if false, return an error before touching the engine. This is the same pattern used by framework services when a HAL crashes.
+
+**Trap — "Why not queue requests until HAL reconnects?"** → Unbounded queuing during an outage is an OOM risk. I use a small bounded queue with a deadline; excess requests are rejected with a retryable error so the client can decide policy.
+
+---
+
+### Q22. How do you handle configuration changes (rotation) without losing state?
+
+**Short:** ViewModel + Repository + LiveData. ViewModel survives rotation via `ViewModelStore`. Repository is a process singleton. LiveData only emits to active lifecycle owners. The UI re-subscribes after rotation and immediately receives the latest cached value.
+
+**Deep dive:** In VDiag, `DiagActivity` holds a `DiagViewModel`. On rotation the Activity is destroyed and recreated, but the ViewModel is retained. The ViewModel's `LiveData<UiState>` continues to observe the Repository; `onCreate` just re-attaches the observer with `viewLifecycleOwner`. No re-fetch from Binder, no lost subscription token if tokens are stored in ViewModel.
+
+**Trap — "What if the callback holds an Activity reference?"** → Memory leak + crash after rotation. VDiag's `DiagClient` callback is dispatched on an executor; the ViewModel transforms events into LiveData, never holding a View reference.
+
+---
+
+### Q23. How do you make a Bound Service survive configuration changes in the client?
+
+**Short:** Bind from `Application` or a process-scoped singleton, not from Activity. Use `ServiceConnection` managed by `DiagClientProvider` (application singleton). Activity only observes data; it doesn't own the service connection.
+
+**Deep dive:** If Activity binds directly, unbind on `onDestroy` kills the connection on rotation. VDiag's `DiagClient` is a singleton tied to `Application` context; it binds once and re-binds only on real disconnect. Activity lifecycle is decoupled from service lifecycle.
+
+---
+
+### Q24. What is the difference between a system service and a bound service?
+
+**Short:** A system service runs in `system_server` (or a privileged daemon), is registered in `SystemServerRegistry`, and is available to all apps via `Context.getSystemService()`. A bound service runs in the app's own process (or a private process) and is bound by explicit intent. VDiag uses a bound service for the emulator demo; production AAOS would register a system service.
+
+**Deep dive:** The *pattern* is the same: AIDL Stub, Binder thread pool, permission enforcement. The difference is packaging and privilege. A system service needs platform signature and runs in the system partition; a bound service ships in the APK. VDiag documents both paths in `bringup.md`.
+
+---
+
+### Q25. How do you approach API design for a library/SDK?
+
+**Short:** Hide the IPC. `DiagClient` exposes domain methods (`getProperty`, `subscribeProperty`, `clearDtc`) and domain enums (`DiagProperty`). Callers never see AIDL, Binder, or JNI. Async results use callbacks/Futures; errors are typed, not raw `RemoteException`.
+
+**Deep dive:** Good SDK design is about *information hiding* and *stable contracts*. VDiag's SDK hides: process boundaries, thread dispatch, HAL transport, and UDS encoding. What it exposes: property IDs, result objects, and lifecycle methods. This mirrors how `Car.createCar()` hides the entire CarService IPC.
+
+**Trap — "Should the SDK expose the AIDL interface?"** → No. Leaking AIDL ties callers to the wire format and prevents you from evolving the implementation.
+
+---
+
+### Q26. How do you version an SDK without breaking consumers?
+
+**Short:** Semantic versioning + additive changes + feature detection. New methods are added; old methods keep working. If a new feature requires a newer service, the SDK checks `getInterfaceVersion()` and degrades gracefully.
+
+**Deep dive:** VDiag's AIDL HAL uses `@VintfStability` and frozen `aidl_api/` snapshots. The app-level AIDL is internal to the APK, so it can evolve with the app. For a public SDK, you'd expose Java interfaces and keep binary compatibility — never remove public methods, never change return types.
+
+---
+
+### Q27. How do you handle backwards compatibility in AIDL parcelables?
+
+**Short:** Only append fields, never insert or remove. New fields must have sensible defaults so old readers ignore them and old writers produce defaults. Use `@nullable` and default values explicitly.
+
+**Deep dive:** AIDL parcelables are positional. Inserting a field in the middle shifts every subsequent field → old code reads wrong offsets. VDiag's `DiagPropertyEvent` was designed with extensibility in mind: primitive fields first, then optional String. Future fields are appended at the end.
+
+---
+
+### Q28. What is the difference between `Parcelable` and `Serializable` in terms of security?
+
+**Short:** `Serializable` uses reflection and can deserialize arbitrary object graphs — vulnerable to deserialization attacks if the stream is attacker-controlled. `Parcelable` is explicit, generated code, no reflection, and only reconstructs the declared fields.
+
+**Deep dive:** In VDiag, Binder IPC stays within the same-signed APK, so the threat is lower. But the principle matters: never use `Serializable` for IPC across trust boundaries. `Parcelable` is also faster and allocation-friendlier.
+
+---
+
+### Q29. How do you prevent memory leaks in a long-running service?
+
+**Short:** RAII, weak references where appropriate, and explicit cleanup in `onDestroy`/`onUnbind`. Every registered callback has a matching unregister. Every `linkToDeath` has an `unlinkToDeath`. Every executor is shut down. Every native resource has a shutdown path.
+
+**Deep dive:** VDiag's leak prevention:
+- `ClientRegistry` removes entries on `binderDied`.
+- `SubscriptionManager` unlinks DeathRecipients on unregister.
+- `JniCallbackBridge` deletes GlobalRef in destructor.
+- `DiagEngine::shutdown()` joins the worker and drains the queue.
+- `ISystemLifecycle.stop()` unregisters watchdog/power listeners.
+
+**Trap — "What about static singletons?"** → Static singletons holding Context or ViewModel leak. VDiag uses application-scoped singletons and clears them in `onTrimMemory` or service destroy.
+
+---
+
+### Q30. How do you handle low-memory conditions (`onTrimMemory`)?
+
+**Short:** Drop non-essential caches, reduce subscription rates, release large ashmem mappings, and cancel background work. Keep only safety-critical state.
+
+**Deep dive:** In VDiag, `DiagCarService` implements `onTrimMemory`. At `TRIM_MEMORY_MODERATE` it reduces non-critical subscription rates from 10Hz to 1Hz. At `TRIM_MEMORY_COMPLETE` it cancels non-essential subscriptions and releases the DTC snapshot ashmem. Critical DTC/session state is preserved.
+
+---
+
+### Q31. How do you design a feature flag system for automotive?
+
+**Short:** Server-driven flags are risky without connectivity. Use build-time flags for safety-critical behavior, runtime flags for UX, and local overrides for development. Flags are versioned and validated against the HAL interface version.
+
+**Deep dive:** VDiag uses a simple `BuildConfig` flag for transport selection (`mock` vs `doip`) and a runtime property for debug logging. In production, feature gates would be tied to VINTF HAL version and vehicle configuration (VIN region, hardware variant).
+
+---
+
+### Q32. How do you handle timezones and clocks in a vehicle?
+
+**Short:** Use monotonic clocks (`SystemClock.elapsedRealtimeNanos()`) for latency and timeouts. Use wall-clock only for user-facing timestamps. Never use `System.currentTimeMillis()` for intervals because it can jump.
+
+**Deep dive:** VDiag's `DiagPropertyEvent.timestampNs` is `System.nanoTime()` (monotonic). UDS P2/P2* timeouts use `steady_clock` in C++. This avoids false timeouts when the user or NTP changes the wall clock.
+
+---
+
+### Q33. What is the difference between `Handler`, `Looper`, `Executor`, and `CoroutineDispatcher`?
+
+**Short:**
+- `Looper` = message pump on a thread.
+- `Handler` = posts runnables to a Looper.
+- `Executor` = abstraction over any thread pool.
+- `CoroutineDispatcher` = Kotlin coroutine's executor abstraction.
+
+VDiag uses `Handler(Looper.getMainLooper())` for UI-bound state updates, `ScheduledExecutorService` for the subscription ticker, and direct executors in tests.
+
+---
+
+### Q34. How do you avoid ANRs in a service?
+
+**Short:** Never do blocking I/O or heavy computation on the main thread or a Binder thread. Offload to executors or native worker threads. Keep Binder methods short (< 1ms ideally).
+
+**Deep dive:** VDiag's `DiagServiceBinder` methods only validate input, update registry, and submit to the engine. The actual UDS round-trip happens on the C++ worker thread. `onBind()` returns immediately. `dump()` snapshots atomics quickly.
+
+---
+
+### Q35. How do you implement a circuit breaker for HAL calls?
+
+**Short:** Track consecutive failures. After N failures, open the circuit and fail fast for a cooldown period. Half-open after cooldown to test recovery. Prevents cascading retries from overwhelming a struggling HAL.
+
+**Deep dive:** VDiag's HAL reconnect already has exponential backoff. A circuit breaker would layer on top: if 5 consecutive `sendAndReceive` calls fail, mark HAL degraded and return `ERR_HAL_DEGRADED` for M milliseconds, then allow one probe. This is useful for production DoIP/CAN where the ECU may be intermittently responsive.
+
+---
+
+### Q36. How do you log safely in production?
+
+**Short:** Never log PII, VIN, DTC details, or technician notes at `INFO`/`DEBUG` in release. Use `BuildConfig.DEBUG` guards. Redact sensitive fields. Use structured logging with levels.
+
+**Deep dive:** VDiag logs property IDs and status codes at `INFO`; actual values are logged only in debug builds. The VIN read is logged as `VIN read OK` without the value in release. This aligns with automotive privacy and security standards.
+
+---
+
+### Q37. How do you handle flaky integration tests?
+
+**Short:** Make them deterministic. Use in-process fakes instead of real network when possible. If real network is needed, use fixed ports, retry with backoff, and generous timeouts. Isolate tests so they don't share state.
+
+**Deep dive:** VDiag's Python DoIP simulator runs on a fixed port and is started fresh per test class. The C++ tests use `MockDiagnosticHal` for determinism. Espresso tests disable animations and use `IdlingResource` instead of `sleep`.
+
+---
+
+### Q38. How do you document architecture decisions?
+
+**Short:** ADRs (Architecture Decision Records) — one file per major decision, explaining context, decision, consequences, and rejected alternatives. VDiag's `docs/` folder is essentially a set of ADRs.
+
+**Deep dive:** Each VDiag module doc (`04_MODULE_DOIP.md`, `06_PROPERTY_SUBSCRIPTION.md`, etc.) follows ADR structure: why the module exists, what was built, trade-offs, and interview talking points. This makes onboarding and interview prep easy.
+
+---
+
+### Q39. How do you prioritize technical debt?
+
+**Short:** Use a MUST/NICE cut list. Protect correctness boundaries (Binder, JNI, HAL) and cut observability/UX polish first. Debt that increases failure modes is paid first; debt that only slows development is scheduled.
+
+**Deep dive:** VDiag's explicit cut list: core (Binder/JNI/Engine/HAL) is non-negotiable; Perfetto/observability, ADAS full implementation, and cloud upload are NICE. This mirrors how you'd triage in a real sprint.
+
+---
+
+### Q40. What metrics would you expose for a production diagnostic service?
+
+**Short:** Latency percentiles (p50/p95/p99) per tier, queue depth, HAL ready state, subscription count, Binder pool saturation, error rate by type, reconnect count, and watchdog health.
+
+**Deep dive:** VDiag's transaction ring buffer captures per-request latency. `dumpsys` exposes these. In production, these would be pushed to StatsLog or a vehicle telemetry pipeline. The key is distinguishing *engine wait time* from *HAL processing time* so you know where to optimize.
+
+---
+
+## 🔥 SECTION C7 — Curveball Questions (Q41–Q50)
+
+### Q41. "Your project is emulator-only. How do we know it works on real hardware?"
+
+**Short:** Three things: the HAL is POSIX-only and cross-compiles to ARM64; the bring-up artifacts (init.rc, SELinux, VINTF) are documented from AAOS source; the architecture patterns are identical to production AAOS. What I can't claim is real-device deployment — I state that boundary honestly.
+
+**Deep dive:** The C++ HAL has zero Android framework dependency. It builds with `aarch64-linux-gnu-g++` and passes all gtests under QEMU. The JNI bridge is the only Android-specific layer, and it uses standard NDK APIs. The bring-up docs follow the exact AAOS flow. The gap is BSP-specific integration and SELinux tuning on a real board.
+
+---
+
+### Q42. "Why not use AIDL for the HAL interface in VDiag?"
+
+**Short:** VDiag's HAL is a C++ library for standalone use and host testing. AIDL would require the Android build system. The *pattern* is the same: a stable interface with frozen versions. The production path is documented: wrap `IDiagnosticHal` in a stable AIDL HAL and register with VINTF.
+
+---
+
+### Q43. "What would you change if this had to ship tomorrow?"
+
+**Short:** Harden the HAL reconnect logic with jitter and circuit breaker. Add fuzz tests for UDS codec. Run instrumented tests on a real Automotive AVD. Add a release ProGuard/R8 smoke test. Add telemetry hooks. Cut ADAS and cloud features if needed.
+
+---
+
+### Q44. "How do you know your tests are good enough?"
+
+**Short:** They catch real bugs I've introduced: JNI ref leaks, race conditions in subscription cleanup, UDS off-by-one encoding, priority queue starvation. ASAN/TSAN are clean. Coverage is a floor, not a ceiling — I also review behavioral assertions.
+
+---
+
+### Q45. "Convince me this isn't AI-generated code."
+
+**Short:** I can whiteboard every boundary, explain every trade-off, and tell you what I cut and why. The tests are tied to design decisions, not just coverage. The docs show iteration (v1.0 → v3.0). And the limitations are stated explicitly — AI slop usually overclaims.
+
+---
+
+### Q46. "What's the most controversial decision in VDiag?"
+
+**Short:** Using a single worker thread in the engine. Some would say "add threads for throughput." But UDS is request-response with one pending session; more threads wouldn't speed up the transport and would add race surface. The controversial part is choosing correctness + simplicity over a more impressive-looking thread pool.
+
+---
+
+### Q47. "How would you onboard someone to this codebase in a week?"
+
+**Short:** Day 1: run the build and tests. Day 2: read `aaos_comparison.md` and trace one request end-to-end. Day 3: pick a boundary and write a test for it. Day 4: read one module doc and make a small change. Day 5: review a PR. The docs are the onboarding curriculum.
+
+---
+
+### Q48. "What part of this project are you least proud of?"
+
+**Short:** The early direct-Service-call code in the app layer. It worked but wasn't rotation-safe or testable. I had to retrofit MVVM seams later. If I restarted, I'd design the MVVM layer from day one.
+
+---
+
+### Q49. "How do you balance depth vs breadth in a portfolio project?"
+
+**Short:** VDiag is deliberately broad — 8 boundaries — to show system thinking. But each boundary has at least one deep proof: JNI RAII, HAL abstraction, subscription cleanup, stable AIDL. The breadth gets the interview; the depth wins it.
+
+---
+
+### Q50. "Why should we hire you over someone with 5 years of AAOS experience?"
+
+**Short:** The 5-year AAOS engineer knows the platform. I bring that *plus* production C++ embedded discipline from LG, plus the ability to self-teach a full stack to production-pattern level in 130 days. I'm hungry, I document, and I know exactly where my gaps are. Hire me if you want someone who will grow fast and own the boundary between Android and hardware.
+
+---
+
+*Continue → [Part D: Behavioral, System Design & Demo](04_BEHAVIORAL.md)*

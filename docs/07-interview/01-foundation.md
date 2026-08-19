@@ -4,7 +4,7 @@
 > **Level target:** Senior (5+ năm). Mỗi câu có **short answer** (nói trong 30-60s) + **deep dive** (khi interviewer đào tiếp) + **trap/follow-up** (câu hỏi bẫy thường theo sau).
 > **Cách dùng:** Đọc to short answer đến khi thuộc. Deep dive chỉ bung ra khi bị hỏi "why" / "how exactly". Đừng info-dump.
 
-Index: [Hub](03_INTERVIEW_PREP.md) · **A: Foundation** · [B: Framework](03b_INTERVIEW_FRAMEWORK.md) · [C: Senior](03c_INTERVIEW_SENIOR.md) · [D: Behavioral](03d_INTERVIEW_BEHAVIORAL.md)
+Index: [Hub](00_INTERVIEW_HUB.md) · **A: Foundation** · [B: Framework](02_FRAMEWORK.md) · [C: Senior](03_SENIOR.md) · [D: Behavioral](04_BEHAVIORAL.md)
 
 ---
 

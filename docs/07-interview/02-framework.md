@@ -3,7 +3,7 @@
 > **Scope:** Property subscription · System health (CarWatchdog / CarPowerManager) · Bring-up (init.rc / SELinux / VINTF) · Stable AIDL versioning · HAL service registration & resilience · CAN transport · ADAS reusability · Real-time engine (SCHED_FIFO / PI mutex) · QA (sanitizers / gcov / clang-tidy) · Embedded ARM64 / QEMU · Observability.
 > **Level target:** Senior. These are the questions that separate a 3-year candidate from a 5+ year one — deployment, versioning, resilience, and toolchain literacy.
 
-Index: [Hub](03_INTERVIEW_PREP.md) · [A: Foundation](03a_INTERVIEW_FOUNDATION.md) · **B: Framework** · [C: Senior](03c_INTERVIEW_SENIOR.md) · [D: Behavioral](03d_INTERVIEW_BEHAVIORAL.md)
+Index: [Hub](00_INTERVIEW_HUB.md) · [A: Foundation](01_FOUNDATION.md) · **B: Framework** · [C: Senior](03_SENIOR.md) · [D: Behavioral](04_BEHAVIORAL.md)
 
 ---
 

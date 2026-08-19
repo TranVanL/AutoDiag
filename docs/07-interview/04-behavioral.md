@@ -3,7 +3,7 @@
 > **Scope:** Behavioral / leadership (STAR) · System design open-ended · Self-driving / ADAS honesty framing · The "5+ years with 3 years experience" defense · Salary / level negotiation · Curveball & deep-dive questions · Demo scripts (30s / 2min / 5min) · Reverse questions (ask the interviewer) · Red-flag answers to avoid.
 > **Level target:** Senior. Technical depth is in Parts A–C; this file is how you *land* it — narrative, honesty, and composure under pressure.
 
-Index: [Hub](03_INTERVIEW_PREP.md) · [A: Foundation](03a_INTERVIEW_FOUNDATION.md) · [B: Framework](03b_INTERVIEW_FRAMEWORK.md) · [C: Senior](03c_INTERVIEW_SENIOR.md) · **D: Behavioral**
+Index: [Hub](00_INTERVIEW_HUB.md) · [A: Foundation](01_FOUNDATION.md) · [B: Framework](02_FRAMEWORK.md) · [C: Senior](03_SENIOR.md) · **D: Behavioral**
 
 ---
 
@@ -294,4 +294,4 @@ From LG AUTOSAR: **watchdog** (stuck-process detection → CarWatchdog analog), 
 
 ---
 
-*Back to → [Hub / Index](03_INTERVIEW_PREP.md)*
+*Back to → [Hub / Index](00_INTERVIEW_HUB.md)*

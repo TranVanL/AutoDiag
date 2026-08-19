@@ -1,7 +1,7 @@
 # VDiag — Vehicle Diagnostics on AAOS
 
 [![VDiag CI](https://github.com/TranVanL/AutoDiag/actions/workflows/ci.yml/badge.svg)](https://github.com/TranVanL/AutoDiag/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-51%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-~51%20passing-brightgreen)](#testing)
 [![ASAN](https://img.shields.io/badge/ASAN-clean-brightgreen)](#testing)
 [![TSAN](https://img.shields.io/badge/TSAN-clean-brightgreen)](#testing)
 [![ARM64](https://img.shields.io/badge/ARM64-QEMU%20tested-success)](#embedded-target)
@@ -10,45 +10,73 @@
 
 ---
 
-## 30-second pitch
+## TL;DR
 
-VDiag clones the AAOS CarService stack for vehicle diagnostics. 100-day build: stable AIDL versioning → HAL service lifecycle → 3-transport HAL abstraction (Mock/DoIP/CAN) → HAL reusability across 8 boundaries, 50+ tests, ASAN/TSAN/CheckJNI clean.
+VDiag is a hands-on AAOS diagnostics stack. It shows how a real car would run diagnostics across Android processes, JNI, C++ HAL, and network transports — not just read an OBD-II PID over Bluetooth.
 
----
-
-## What this actually is
-
-Most GitHub demos stop at "I can read an OBD-II PID over Bluetooth." This one goes the other way: it treats diagnostics as a **system-level Android Automotive feature**, with the same layering, permissions, and lifecycle you'd ship on a real car.
-
-The app layer talks to a bound car service over Binder. The service talks through JNI to a C++ HAL core. The HAL core dispatches UDS requests through a pluggable transport layer. Swap Mock for DoIP, or DoIP for SocketCAN, and the framework code above it does not change.
-
-Why build it this way? Because in production, the diagnostic stack lives in multiple processes, crosses Java/C++ boundaries, has to survive client crashes, and must boot with the rest of the vehicle. VDiag is a sandbox for all of those problems.
+You can build it on a laptop, run it on an emulator, swap transports without touching the app, and verify everything with ASAN, TSAN, ARM64 QEMU, and a Python ECU simulator.
 
 ---
 
-## The 8 boundaries
+## What makes this different?
 
-| Boundary | What it separates | How VDiag handles it |
-|---|---|---|
-| **B1** App → Car Service | Binder IPC, cross-process | `IDiagCarService.aidl`, signature permission gate, `ClientRegistry` |
-| **B2** Java → Native | JNI lifecycle | `JNI_OnLoad` class caching, RAII `GlobalRef`, `pthread_key` auto-detach |
-| **B3** Service → Engine | Threading + priority | 4-tier priority queue, `SCHED_FIFO` worker, PI mutex |
-| **B4** Engine → Transport | HAL abstraction | `IDiagnosticHal` pure virtual interface — Mock/DoIP/CAN plug in unchanged |
-| **B5** Property subscription | Push model | `SubscriptionManager`, per-area `areaId`, max-rate throttling, `DeathRecipient` cleanup |
-| **B6** System lifecycle | Power/health | `ISystemLifecycle` shim, CarWatchdog-ready heartbeat |
-| **B7** Device bring-up | Vendor integration | `init.vdiag.rc`, SELinux `.te` policy, VINTF manifest, privapp-permissions |
-| **B8** Embedded target | Host vs. target | ARM64 cross-compile with `aarch64-linux-gnu`, QEMU user-mode test run |
+Most GitHub demos stop at "I can talk to an ELM327 adapter." VDiag goes the other way: it models the **system-level stack** you would actually ship in a vehicle.
+
+That means:
+
+- **Multi-process by design** — the app and the car service live in separate processes, connected by Binder/AIDL.
+- **Permission per property** — reading VIN, battery SOC, or tire pressure each requires its own signature permission.
+- **JNI done carefully** — class/method caching in `JNI_OnLoad`, RAII `GlobalRef`, and exception-safe callbacks.
+- **Pluggable transport** — same framework code talks to Mock, DoIP TCP, or SocketCAN on Linux host.
+- **Crash-safe** — `DeathRecipient` cleans up when a client dies mid-request.
+- **Push, not poll** — property subscriptions use area-aware, rate-throttled push events.
+- **CI that actually checks things** — ASAN, TSAN, ARM64 cross-compile under QEMU, Android APK build, and Python DoIP integration.
+
+---
+
+## The stack in 30 seconds
+
+```
+App (Java)  →  Car Service (Java, :car_service)
+                     ↓ Binder / AIDL
+              JNI Bridge (libvdiag_jni.so)
+                     ↓
+              DiagEngine (C++17)
+                     ↓
+              IDiagnosticHal
+         Mock  │  DoIP TCP  │  SocketCAN (Linux host)
+```
+
+The HAL layer is pure virtual. Swap the implementation, and nothing above it changes.
+
+---
+
+## What is actually implemented?
+
+| Layer | Highlights |
+|---|---|
+| **Android app** | `DiagClient` SDK facade, `MainActivity`, bound service pattern |
+| **Car service** | `DiagCarService` in isolated `:car_service` process, `DiagCarServiceBinder`, `ClientRegistry`, `PermissionGate` |
+| **JNI** | `JNI_OnLoad` caching, RAII `GlobalRef`, `JniCallbackBridge`, `pthread_key` auto-detach |
+| **Engine** | 4-tier priority queue, worker thread, `SessionStateMachine`, `UdsCodec` |
+| **HAL** | `IDiagnosticHal` interface, `MockDiagnosticHal`, `DoipDiagnosticHal`, `CanDiagnosticHal` |
+| **UDS services** | `0x22` ReadByIdentifier, `0x14` ClearDTC, `0x19` ReadDTC, `0x10` SessionControl, `0x3E` TesterPresent, `0x27` SecurityAccess |
+| **Subscriptions** | `SubscriptionManager`, per-area `areaId`, 100ms tick, rate throttling, `DeathRecipient` cleanup |
+| **Bring-up** | Reference `init.vdiag.rc`, SELinux `.te`, VINTF manifest, privapp-permissions, `@VintfStability` AIDL HAL v1 |
+| **Embedded** | ARM64 cross-compile with `aarch64-linux-gnu`, QEMU user-mode test run |
+
+> **Note on CAN:** `CanDiagnosticHal` runs on Linux hosts via SocketCAN (`vcan0`). It is intentionally gated out of the Android device build because production CAN access needs board-specific kernel and SELinux work.
 
 ---
 
 ## Quick start
 
 ```bash
-# 1 — Build & test HAL on Linux host (no device needed)
+# 1 — Build & test the HAL on a Linux host
 cd hal && mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(nproc) && ctest --output-on-failure
 
-# 2 — Run with ASAN
+# 2 — Run with AddressSanitizer
 cmake .. -DCMAKE_CXX_FLAGS="-fsanitize=address" && make -j$(nproc) && ctest
 
 # 3 — Cross-compile for ARM64 and run under QEMU
@@ -57,12 +85,12 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-aarch64.cmake \
          -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;/usr/aarch64-linux-gnu"
 make -j$(nproc) && ctest --output-on-failure
 
-# 4 — Build Android APK (requires Android Studio SDK)
+# 4 — Build the Android APK
 cd ../../android && ./gradlew assembleDebug
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-> **No hardware required.** Everything runs on a Linux host + Android Automotive AVD. For production device deployment, see [docs/bringup.md](docs/bringup.md).
+No hardware required. Everything runs on a Linux host + Android Automotive emulator.
 
 ---
 
@@ -70,75 +98,31 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ APP + SDK  (process: com.vdiag)                                        │
-│   MainActivity  →  DiagClient (= CarDiagnosticManager-style)          │
+│  APP (com.vdiag)                                                       │
+│    MainActivity → DiagClient                                           │
 ├────────────────────────────────────────────────────────────────────────┤
-│                  ═══ B1: BINDER IPC (AIDL, cross-process) ═══         │
+│  ═══ B1: BINDER IPC (AIDL, cross-process) ═══                         │
 ├────────────────────────────────────────────────────────────────────────┤
-│ DIAG CAR SERVICE  (process: com.vdiag:car_service)                    │
-│   DiagCarService  →  DiagCarServiceBinder (IDiagCarService.Stub)      │
-│   PermissionGate (per-property signature perm)                        │
-│   ClientRegistry + DeathRecipient cleanup                             │
+│  CAR SERVICE (com.vdiag:car_service)                                   │
+│    DiagCarServiceBinder · PermissionGate · ClientRegistry              │
+│    SubscriptionManager · DeathRecipient cleanup                        │
 ├────────────────────────────────────────────────────────────────────────┤
-│                  ═══ B2: JNI (GlobalRef RAII + auto-detach) ═══       │
+│  ═══ B2: JNI (GlobalRef RAII + auto-detach) ═══                       │
 ├────────────────────────────────────────────────────────────────────────┤
-│ HAL BRIDGE  (libvdiag_jni.so)                                         │
-│   JNI_OnLoad: cache jclass + jmethodID  ·  JniCallbackBridge (RAII)  │
+│  libvdiag_jni.so                                                       │
+│    JNI_OnLoad cache · JniCallbackBridge                                │
 ├────────────────────────────────────────────────────────────────────────┤
-│         ═══ B3: ENGINE QUEUE (4-tier priority + PI mutex) ═══         │
+│  ═══ B3: ENGINE QUEUE (4-tier priority) ═══                           │
 ├────────────────────────────────────────────────────────────────────────┤
-│ DIAG ENGINE  (C++17, libvdiag_hal.a)                                  │
-│   4-tier queue (CRITICAL>HIGH>NORMAL>LOW) · SCHED_FIFO worker         │
-│   SessionStateMachine · UdsCodec (ISO 14229, 6 services)              │
+│  DiagEngine (C++17)                                                    │
+│    Priority queue · Worker thread · SessionStateMachine · UdsCodec     │
 ├────────────────────────────────────────────────────────────────────────┤
-│               ═══ B4: HAL ABSTRACTION (pure virtual) ═══              │
+│  ═══ B4: HAL ABSTRACTION (pure virtual) ═══                           │
 ├────────────────────────────────────────────────────────────────────────┤
-│ DIAGNOSTIC HAL  (IDiagnosticHal pure virtual)                         │
-│   MockDiagnosticHal  │  DoipDiagnosticHal (TCP/ISO 13400)             │
-│   CanDiagnosticHal (SocketCAN/ISO-TP)                                 │
+│  IDiagnosticHal                                                        │
+│    MockDiagnosticHal · DoipDiagnosticHal · CanDiagnosticHal (host)     │
 └────────────────────────────────────────────────────────────────────────┘
-  Cross-cutting:
-    B5 SubscriptionManager (100ms tick · max-rate · DeathRecipient)
-    B6 ISystemLifecycle (CarWatchdog / Handler shim)
-    B7 Bring-up (init.rc · SELinux · VINTF · privapp-permissions)
-    B8 Embedded (ARM64 cross-compile · QEMU user-mode)
 ```
-
----
-
-## AAOS component mapping
-
-| AAOS (production) | VDiag (this project) | Pattern |
-|---|---|---|
-| `Car.createCar(context)` | `DiagClient.create(context)` | Service-binding factory |
-| `CarHvacManager` / `CarSensorManager` | `DiagClient` | Domain-typed manager |
-| `CarService` | `DiagCarService` | Bound Service, isolated `:car_service` process |
-| `VehicleHal` (JNI wrapper) | `DiagHalBridge` (`libvdiag_jni.so`) | Java↔C++ bridge |
-| `IVehicle.aidl` | `IDiagnosticHal` (pure virtual) | HAL contract |
-| `DefaultVehicleHal` | `MockDiagnosticHal` | Reference / emulator impl |
-| `VehiclePropValue` | `DiagRequest` / `DiagPropertyEvent` | IPC data transfer object |
-| `PERMISSION_CAR_*` | `com.vdiag.permission.DIAGNOSE`, `READ_BATTERY`, `READ_TIRES`, `READ_POWERTRAIN` | Signature-level, per-property permission |
-| `CarPropertyManager.registerCallback()` | `DiagClient.subscribeProperty(areaId, rateHz, callback)` | Push/subscribe event model with areaId |
-| `CarPropertyEvent` | `DiagPropertyEvent` with `status` enum | AVAILABLE / UNAVAILABLE / ERROR |
-| `CarWatchdogClient` | `ISystemLifecycle` + `ShimSystemClient` | System health heartbeat |
-| VINTF manifest | `android/bringup/manifest_vdiag.xml` + `@VintfStability` AIDL HAL | Stable HAL versioning |
-
-Full 15-row table with boundary analysis: [docs/aaos_comparison.md](docs/aaos_comparison.md)
-
----
-
-## Tech stack
-
-| Layer | Technology |
-|---|---|
-| **Android app** | Java, AIDL, Binder, `android:process=":car_service"`, `DeathRecipient` |
-| **JNI bridge** | C++17, `JNI_OnLoad`, RAII GlobalRef, `pthread_key` auto-detach |
-| **HAL core** | C++17, CMake, 4-tier priority queue, PI mutex (`PTHREAD_PRIO_INHERIT`) |
-| **UDS codec** | ISO 14229 — `0x22` ReadByIdentifier, `0x14` ClearDTC, `0x19` ReadDTC, `0x10` SessionControl, `0x3E` TesterPresent, `0x27` SecurityAccess |
-| **Transports** | Mock (in-process) · DoIP TCP/ISO 13400 · SocketCAN/ISO-TP |
-| **System health** | `CarWatchdog` (Automotive AVD) / `Handler` shim (standard AVD) |
-| **Build** | CMake (HAL standalone) · Gradle (Android) · GitHub Actions CI |
-| **Testing** | gtest · ASAN · TSAN · ARM64 cross-compile + QEMU · Python integration · Android instrumented tests |
 
 ---
 
@@ -146,37 +130,33 @@ Full 15-row table with boundary analysis: [docs/aaos_comparison.md](docs/aaos_co
 
 ```
 hal/tests/
-  test_uds_codec_gtest.cpp      — UDS encode/decode, all 6 services, positive + NRC paths
-  test_mock_hal_gtest.cpp       — MockDiagnosticHal DID lookup, DTC clear, area-aware properties
-  test_session_state_gtest.cpp  — SessionStateMachine transitions (Idle→Pending→Done|Error)
+  test_uds_codec_gtest.cpp      — UDS encode/decode, 6 services, positive + NRC paths
+  test_mock_hal_gtest.cpp       — Mock DID lookup, DTC clear, area-aware properties
+  test_session_state_gtest.cpp  — Session state transitions
+  test_diag_engine_gtest.cpp    — Priority queue + worker behavior
 
-android/app/src/test/           — Java unit tests
 android/app/src/androidTest/    — Permission-gate instrumented tests
-python_simulator/testDoIP.py    — Full DoIP round-trip against Python ECU simulator
-
-Total: 51 tests
-  - 38 HAL gtest cases
-  - 8 Android instrumented permission tests
-  - 4 Python DoIP integration tests
-  - 1 Java unit test
-
-ASAN:  clean (0 leaks, 0 heap errors)
-TSAN:  clean (0 data races)
-ARM64: all HAL tests pass under QEMU user-mode (aarch64-linux-gnu-g++ + qemu-aarch64-static)
+python_simulator/testDoIP.py    — DoIP round-trip against Python ECU simulator
 ```
 
-Run:
+**~51 tests total:** 42 HAL gtest cases + 9 Android instrumented tests + Python integration sequences.
+
+- ASAN: clean
+- TSAN: clean
+- ARM64: all HAL tests pass under QEMU user-mode
+
+Run HAL tests:
 ```bash
 cd hal/build && ctest --output-on-failure -V
 ```
 
-CI matrix (GitHub Actions): native x86_64 with `[None, Address, Thread]` sanitizers · ARM64 cross-compile + QEMU · Android APK build · Python DoIP simulation. See [.github/workflows/ci.yml](.github/workflows/ci.yml).
+CI runs native x86_64 with `[None, Address, Thread]` sanitizers, ARM64 QEMU, Android APK build, and Python DoIP simulation. See [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ---
 
 ## Embedded target
 
-The HAL builds standalone for ARM64 without the Android runtime. This matters because on a real ECU or domain controller you often cannot run the full Android stack, but you still want to reuse the same UDS codec, session state machine, and transport abstraction.
+The HAL builds standalone for ARM64 without the Android runtime. Same UDS codec, same session machine, same transport abstraction — reusable on an ECU or domain controller.
 
 ```bash
 cd hal
@@ -186,70 +166,29 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-aarch64.cmake \
 make -j$(nproc) && ctest --output-on-failure
 ```
 
-`file test_uds_codec` → `ELF 64-bit LSB executable, ARM aarch64`. The same source tree compiles for host and target because the HAL layer is POSIX-only and has no dependency on Android frameworks.
+---
+
+## Why this matters for hiring
+
+This project demonstrates the kind of system thinking that matters in automotive Android:
+
+- **Architecture:** proper layering across Java/C++/network boundaries.
+- **Robustness:** crash cleanup, exception-safe JNI, state machines.
+- **Testing:** sanitizers, cross-compilation, integration simulation.
+- **Production awareness:** permissions, multi-process lifecycle, bring-up reference files.
+
+It is not a toy OBD reader. It is a miniature AAOS diagnostics subsystem.
 
 ---
 
-## Android bring-up
+## Documentation
 
-Production AAOS integration files live in `android/bringup/`:
-
-| File | Purpose |
+| Folder | Docs |
 |---|---|
-| `init.vdiag.rc` | Starts `vdiag_hal` as a `class hal` service at boot |
-| `sepolicy/vdiag_hal.te` | SELinux type enforcement: Binder, socket, CAN device, logd, vendor property |
-| `manifest_vdiag.xml` | VINTF manifest declaring `android.hardware.vdiag@1.0::IDiagnosticHal/default` |
-| `privapp-permissions-vdiag.xml` | Privileged-app permission allowlist |
-| `framework_compatibility_matrix.xml` | Framework compatibility matrix for VINTF enforcement |
+| **01-architecture** | [`01-system-architecture.md`](docs/01-architecture/01-system-architecture.md) · [`02-hal-service-deep-dive.md`](docs/01-architecture/02-hal-service-deep-dive.md) · [`03-jni-lifecycle.md`](docs/01-architecture/03-jni-lifecycle.md) · [`04-stable-aidl-hal.md`](docs/01-architecture/04-stable-aidl-hal.md) |
+| **02-modules** | [`01-doip-module.md`](docs/02-modules/01-doip-module.md) · [`02-transport-comparison.md`](docs/02-modules/02-transport-comparison.md) · [`03-property-subscription.md`](docs/02-modules/03-property-subscription.md) · [`04-property-subscription-deep.md`](docs/02-modules/04-property-subscription-deep.md) · [`05-carwatchdog-power.md`](docs/02-modules/05-carwatchdog-power.md) |
+| **03-performance** | [`01-performance-tuning.md`](docs/03-performance/01-performance-tuning.md) · [`02-multi-ecu-scaling.md`](docs/03-performance/02-multi-ecu-scaling.md) |
+| **04-testing-debugging** | [`01-testing-pyramid.md`](docs/04-testing-debugging/01-testing-pyramid.md) · [`02-debugging-observability.md`](docs/04-testing-debugging/02-debugging-observability.md) · [`03-ci-cd-deep-dive.md`](docs/04-testing-debugging/03-ci-cd-deep-dive.md) |
+| **05-bringup** | [`01-bringup-guide.md`](docs/05-bringup/01-bringup-guide.md) · [`02-bringup-troubleshooting.md`](docs/05-bringup/02-bringup-troubleshooting.md) · [`03-aaos-comparison.md`](docs/05-bringup/03-aaos-comparison.md) |
+| **06-project-history** | [`01-project-evolution.md`](docs/06-project-history/01-project-evolution.md) · [`02-lessons.md`](docs/06-project-history/02-lessons.md) · [`03-study-day1-day2.md`](docs/06-project-history/03-study-day1-day2.md) · [`04-sdk-deep-dive.md`](docs/06-project-history/04-sdk-deep-dive.md) |
 
-The vendor-facing HAL interface is annotated with `@VintfStability` and versioned under `android/aidl_hal/v1/`, matching the AAOS stable AIDL freeze workflow.
-
----
-## Project structure
-
-```
-VDiag/
-├── android/                  # Android Studio project
-│   ├── app/src/main/
-│   │   ├── aidl/com/vdiag/   # IDiagCarService, IDiagCallback, DiagRequest, DiagPropertyEvent
-│   │   ├── java/com/vdiag/
-│   │   │   ├── service/      # DiagCarService, DiagCarServiceBinder, DiagHalBridge, ClientRegistry
-│   │   │   ├── sdk/          # DiagClient, DiagProperty, DiagListener
-│   │   │   └── ui/           # MainActivity, ResultAdapter
-│   │   └── cpp/              # jni_onload, jni_bridge, jni_callback (RAII)
-│   ├── aidl_hal/             # @VintfStability vendor HAL + v1 snapshot
-│   └── bringup/              # init.rc, sepolicy, VINTF manifest, permissions
-│
-├── hal/                      # C++ standalone (Linux host + ARM64 target)
-│   ├── include/              # IDiagnosticHal, DiagEngine, UdsCodec, SessionState, ...
-│   ├── src/                  # MockDiagnosticHal, DoipDiagnosticHal, CanDiagnosticHal, ...
-│   ├── tests/                # gtest suite — no Android runtime dependency
-│   └── cmake/toolchain-aarch64.cmake
-│
-├── python_simulator/         # DoIP ECU simulator + integration test client
-│
-├── docs/                     # Detailed docs (see table above)
-│
-└── .github/workflows/
-    └── ci.yml                # x86_64 + ASAN/TSAN + ARM64 QEMU + Android + Python
-```
-
----
-
-## CV bullets
-
-```
-VDiag — Android Automotive Vehicle Diagnostic Platform (C++17, Java, AIDL)
-• Stable AIDL versioning: @VintfStability vendor HAL interface + v1 snapshot for OTA compatibility
-• HAL service lifecycle: isolated :car_service process + DeathRecipient client cleanup
-• 3-transport HAL abstraction: Mock / DoIP / CAN — framework zero-change via IDiagnosticHal
-• Android bring-up: init.rc + SELinux .te policy + VINTF manifest + privapp-permissions
-• ARM64 cross-compile: aarch64-linux-gnu + QEMU user-mode — HAL tests green on ARM target
-• CI matrix: x86_64 + ARM64 + ASAN + TSAN + Android APK + Python simulation
-```
-
----
-
-## License
-
-MIT
