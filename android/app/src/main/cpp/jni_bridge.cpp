@@ -254,7 +254,7 @@ Java_com_vdiag_service_DiagHalBridge_nativeReadProperty__II(
     }
 
     __android_log_print(ANDROID_LOG_DEBUG, JNI_TAG,
-                        "nativeReadProperty: propId=0x%X areaId=%d → \"%s\"",
+                        "nativeReadProperty: propId = 0x%X  areaId = %d → \"%s\"",
                         propId, areaId, out.c_str());
     return env->NewStringUTF(out.c_str());
 }
